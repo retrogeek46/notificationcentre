@@ -4,6 +4,10 @@
 #include <WiFiManager.h>
 #include <TFT_eSPI.h>
 #include <time.h>
+#include "slack_icon.h"
+
+#define ICON_HEIGHT 16
+#define ICON_WIDTH 16
 
 TFT_eSPI tftMain = TFT_eSPI();
 WebServer server(80);
@@ -90,6 +94,24 @@ void loop() {
   delay(10);
 }
 
+void drawSlackIcon(int x, int y) {
+  static uint16_t lineBuf[ICON_WIDTH];
+
+  // slack_map is 2 bytes per pixel, row-major
+  const uint8_t* p = slack_icon_map;
+
+  for (int row = 0; row < ICON_HEIGHT; row++) {
+    for (int col = 0; col < ICON_WIDTH; col++) {
+      uint8_t lo = *p++;
+      uint8_t hi = *p++;
+      uint16_t rgb565 = (lo << 8) | hi; // LVGL uses little-endian (lo,hi)
+      lineBuf[col] = rgb565;
+    }
+  // Draw this row
+  tftMain.pushImage(x, y + row, ICON_WIDTH, 1, lineBuf);
+  }
+}
+
 void handleClearAll() {
   Serial.println("=== CLEAR ALL NOTIFICATIONS ===");
   
@@ -116,17 +138,16 @@ String getIcon(String icon) {
 }
 
 void handleSimpleNotify() {
-  String title = server.arg("title");
-  String icon = server.arg("icon");
+  String app = server.arg("app");
+  String message = server.arg("message");
+  String from = server.arg("from");
   String priority = server.arg("priority");
-  String msg = server.arg("msg");
   
-  if (title == "") title = msg;
-  if (title == "") title = "Notification";
-  if (icon == "") icon = "phone";
+  if (message == "") message = "Notification";
+  if (app == "") app = "App";
+  if (from == "") from = "Unknown";
   
-  // String fullMsg = getIcon(icon) + " " + title;
-  String fullMsg = title;
+  String fullMsg = "[" + app + "] From: " + from + ": " + message;
   uint16_t color = getPriorityColor(priority.c_str());
   
   Serial.println("GET: " + fullMsg);
@@ -136,21 +157,22 @@ void handleSimpleNotify() {
 
 void handleFormNotify() {
   Serial.println("=== FORM POST ===");
-  
+
+  String app = server.arg("app");
   String message = server.arg("message");
-  String icon = server.arg("icon");
+  String from = server.arg("from");
   String priority = server.arg("priority");
-  
-  Serial.printf("Form data - message: [%s], icon: [%s], priority: [%s]\n", 
-                message.c_str(), icon.c_str(), priority.c_str());
-  
+
+  Serial.printf("Form data - app: [%s], message: [%s], from: [%s], priority: [%s]\n", 
+                app.c_str(), message.c_str(), from.c_str(), priority.c_str());
+
   if (message == "") message = "Notification";
-  if (icon == "") icon = "phone";
-  
-  // String fullMsg = getIcon(icon) + " " + message;
-  String fullMsg = message;
+  if (app == "") app = "App";
+  if (from == "") from = "Unknown";
+
+  String fullMsg = "[" + app + "] From: " + from + ": " + message;
   uint16_t color = getPriorityColor(priority.c_str());
-  
+
   Serial.println("Final: " + fullMsg);
   addNotification(fullMsg, color);
   server.send(200, "application/json", "{\"status\":\"OK\"}");
@@ -159,9 +181,9 @@ void handleFormNotify() {
 void handleRoot() {
   String html = "<h1>Notification Center</h1>";
   html += "<p><b>Working POST (form):</b></p>";
-  html += "<p><code>curl -X POST http://notification.local/notify \\<br>";
+  html += "<p>de>curl -X POST http://notification.local/notify \\<br>";
   html += "-H \"Content-Type: application/x-www-form-urlencoded\" \\<br>";
-  html += "-d \"message=Dinner Ready&icon=pizza&priority=high\"</code></p>";
+  html += "-d \"app=Slack&from=Alice&message=Lunch Ready&priority=high\"</code></p>";
   server.send(200, "text/html", html);
 }
 
@@ -207,9 +229,12 @@ void refreshNotifications() {
   // Notifications below header (y=65)
   tftMain.setTextSize(2);
   for (int i = 0; i < 5; i++) {
+    int y = 30 + i * 35;
+    
     if (notifications[i] != "") {
+      drawSlackIcon(5, y);
       tftMain.setTextColor(notificationColors[i]);
-      tftMain.drawString(notifications[i], 5, 30 + i * 35);
+      tftMain.drawString(notifications[i], 5 + ICON_WIDTH + 5, y);
     }
   }
 }
