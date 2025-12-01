@@ -4,6 +4,7 @@
 #include <WiFiManager.h>
 #include <TFT_eSPI.h>
 #include <time.h>
+#include <pgmspace.h>  // For PROGMEM reading
 #include "slack_icon.h"
 
 #define ICON_HEIGHT 16
@@ -11,17 +12,29 @@
 
 TFT_eSPI tftMain = TFT_eSPI();
 WebServer server(80);
-String notifications[5] = {"", "", "", "", ""};
-uint16_t notificationColors[5] = {TFT_WHITE, TFT_WHITE, TFT_WHITE, TFT_WHITE, TFT_WHITE};
+
+// Structured notification system
+struct Notification {
+  String app;
+  String from;
+  String message;
+  uint16_t color;
+  
+  Notification() : app(""), from(""), message(""), color(TFT_WHITE) {}
+};
+
+Notification notifications[5];
 
 uint16_t getPriorityColor(const char* priority);
-String getIcon(String icon);
+void drawAppIcon(int x, int y, String app);
+void drawSlackIcon(int x, int y);
 void handleSimpleNotify();
 void handleFormNotify();
 void handleClearAll();
-void addNotification(String msg, uint16_t color);
+void handleRoot();
+void addStructuredNotification(String app, String from, String msg, uint16_t color);
 void refreshNotifications();
-void updateClock();  // Separate clock updater
+void updateClock();
 
 unsigned long lastClockUpdate = 0;
 
@@ -63,6 +76,11 @@ void setup() {
   }
   Serial.println(" OK");
   
+  // Initialize notifications
+  for (int i = 0; i < 5; i++) {
+    notifications[i] = Notification();
+  }
+  
   MDNS.begin("notification");
   MDNS.addService("http", "tcp", 80);
   
@@ -96,30 +114,44 @@ void loop() {
 
 void drawSlackIcon(int x, int y) {
   static uint16_t lineBuf[ICON_WIDTH];
-
-  // slack_map is 2 bytes per pixel, row-major
   const uint8_t* p = slack_icon_map;
 
   for (int row = 0; row < ICON_HEIGHT; row++) {
     for (int col = 0; col < ICON_WIDTH; col++) {
-      uint8_t lo = *p++;
-      uint8_t hi = *p++;
-      uint16_t rgb565 = (lo << 8) | hi; // LVGL uses little-endian (lo,hi)
+      uint8_t lo = pgm_read_byte(p++);
+      uint8_t hi = pgm_read_byte(p++);
+      uint16_t rgb565 = (lo << 8) | hi;  // Fixed byte order for TFT_eSPI
       lineBuf[col] = rgb565;
     }
-  // Draw this row
-  tftMain.pushImage(x, y + row, ICON_WIDTH, 1, lineBuf);
+    tftMain.pushImage(x, y + row, ICON_WIDTH, 1, lineBuf);
+  }
+}
+
+void drawAppIcon(int x, int y, String app) {
+  app.toLowerCase();
+  
+  if (app.indexOf("slack") >= 0) {
+    drawSlackIcon(x, y);
+  } else if (app.indexOf("whatsapp") >= 0) {
+    // WhatsApp placeholder (green circle)
+    tftMain.fillCircle(x + 8, y + 8, 7, TFT_GREEN);
+    tftMain.drawCircle(x + 8, y + 8, 7, TFT_WHITE);
+  } else if (app.indexOf("telegram") >= 0) {
+    // Telegram placeholder (blue circle)
+    tftMain.fillCircle(x + 8, y + 8, 7, TFT_BLUE);
+    tftMain.drawCircle(x + 8, y + 8, 7, TFT_WHITE);
+  } else {
+    // Default app icon (grey square with border)
+    tftMain.fillRect(x, y, ICON_WIDTH, ICON_HEIGHT, TFT_DARKGREY);
+    tftMain.drawRect(x, y, ICON_WIDTH, ICON_HEIGHT, TFT_WHITE);
   }
 }
 
 void handleClearAll() {
   Serial.println("=== CLEAR ALL NOTIFICATIONS ===");
-  
   for (int i = 0; i < 5; i++) {
-    notifications[i] = "";
-    notificationColors[i] = TFT_WHITE;
+    notifications[i] = Notification();
   }
-  
   refreshNotifications();
   server.send(200, "application/json", "{\"status\":\"cleared\"}");
 }
@@ -131,76 +163,65 @@ uint16_t getPriorityColor(const char* priority) {
   return TFT_WHITE;
 }
 
-String getIcon(String icon) {
-  if (icon.indexOf("pizza") >= 0 || icon.indexOf("🍕") >= 0) return "[Pizza]";
-  if (icon.indexOf("phone") >= 0 || icon.indexOf("📱") >= 0) return "[Phone]";
-  return icon.length() > 1 ? "[Icon]" : icon;
+void addStructuredNotification(String app, String from, String msg, uint16_t color) {
+  for (int i = 4; i > 0; i--) {
+    notifications[i] = notifications[i-1];
+  }
+  
+  notifications[0].app = app;
+  notifications[0].from = from;
+  notifications[0].message = msg.substring(0, 48);
+  notifications[0].color = color;
+  
+  refreshNotifications();
 }
 
 void handleSimpleNotify() {
   String app = server.arg("app");
-  String message = server.arg("message");
   String from = server.arg("from");
+  String message = server.arg("message");
   String priority = server.arg("priority");
   
   if (message == "") message = "Notification";
   if (app == "") app = "App";
   if (from == "") from = "Unknown";
   
-  String fullMsg = "[" + app + "] From: " + from + ": " + message;
-  uint16_t color = getPriorityColor(priority.c_str());
-  
-  Serial.println("GET: " + fullMsg);
-  addNotification(fullMsg, color);
+  Serial.println("App: " + app + ", From: " + from + ", Msg: " + message);
+  addStructuredNotification(app, from, message, getPriorityColor(priority.c_str()));
   server.send(200, "text/plain", "OK");
 }
 
 void handleFormNotify() {
   Serial.println("=== FORM POST ===");
-
+  
   String app = server.arg("app");
-  String message = server.arg("message");
   String from = server.arg("from");
+  String message = server.arg("message");
   String priority = server.arg("priority");
-
-  Serial.printf("Form data - app: [%s], message: [%s], from: [%s], priority: [%s]\n", 
-                app.c_str(), message.c_str(), from.c_str(), priority.c_str());
-
+  
+  Serial.printf("Form data - app: [%s], from: [%s], message: [%s], priority: [%s]\n", 
+                app.c_str(), from.c_str(), message.c_str(), priority.c_str());
+  
   if (message == "") message = "Notification";
   if (app == "") app = "App";
   if (from == "") from = "Unknown";
-
-  String fullMsg = "[" + app + "] From: " + from + ": " + message;
-  uint16_t color = getPriorityColor(priority.c_str());
-
-  Serial.println("Final: " + fullMsg);
-  addNotification(fullMsg, color);
+  
+  addStructuredNotification(app, from, message, getPriorityColor(priority.c_str()));
   server.send(200, "application/json", "{\"status\":\"OK\"}");
 }
 
 void handleRoot() {
   String html = "<h1>Notification Center</h1>";
-  html += "<p><b>Working POST (form):</b></p>";
-  html += "<p>de>curl -X POST http://notification.local/notify \\<br>";
-  html += "-H \"Content-Type: application/x-www-form-urlencoded\" \\<br>";
-  html += "-d \"app=Slack&from=Alice&message=Lunch Ready&priority=high\"</code></p>";
+  html += "<p><b>POST example:</b></p>";
+  html += "<p>curl -X POST http://notification.local/notify \\<br>";
+  html += "-d \"app=slack&from=Alice&message=Lunch Ready&priority=high\"</code></p>";
+  html += "<p><b>GET example:</b></p>";
+  html += "<p>http://notification.local/notify?app=whatsapp&from=Bob&message=Meeting&priority=medium</code></p>";
   server.send(200, "text/html", html);
 }
 
-void addNotification(String msg, uint16_t color) {
-  for (int i = 4; i > 0; i--) {
-    notifications[i] = notifications[i-1];
-    notificationColors[i] = notificationColors[i-1];
-  }
-  notifications[0] = msg.substring(0, 35);
-  notificationColors[0] = color;
-  refreshNotifications();
-}
-
 void updateClock() {
-  // Only update clock area (partial redraw for smoothness)
-  tftMain.fillRect(200, 5, 120, 20, TFT_BLACK);  // Clear clock area only
-  
+  tftMain.fillRect(200, 5, 120, 20, TFT_BLACK);
   tftMain.setTextSize(2);
   tftMain.setTextColor(TFT_CYAN);
   
@@ -210,31 +231,57 @@ void updateClock() {
   char timeStr[20];
   strftime(timeStr, sizeof(timeStr), "%H:%M:%S", &timeinfo);
   
-  tftMain.drawString(timeStr, 200, 5);  // Fixed position
+  tftMain.drawString(timeStr, 200, 5);
 }
 
 void refreshNotifications() {
   tftMain.fillScreen(TFT_BLACK);
   
-  // HEADER: Single line with title LEFT + clock RIGHT
+  // Header
   tftMain.setTextSize(2);
-  
-  // Title left
   tftMain.setTextColor(TFT_YELLOW);
   tftMain.drawString("NOTIFICATIONS", 5, 5);
-  
-  // Initial clock draw
   updateClock();
   
-  // Notifications below header (y=65)
+  // Notifications - FONT SIZE 2 + SENDER/MESSAGE COLORS + 27 CHAR LIMIT
   tftMain.setTextSize(2);
   for (int i = 0; i < 5; i++) {
-    int y = 30 + i * 35;
+    int y = 40 + i * 55;
     
-    if (notifications[i] != "") {
-      drawSlackIcon(5, y);
-      tftMain.setTextColor(notificationColors[i]);
-      tftMain.drawString(notifications[i], 5 + ICON_WIDTH + 5, y);
+    if (notifications[i].message != "") {
+      // App icon (16x16)
+      drawAppIcon(5, y, notifications[i].app);
+      
+      // Sender name (bold color - priority color)
+      tftMain.setTextColor(notifications[i].color);
+      String sender = notifications[i].from;
+      if (sender.length() > 10) sender = sender.substring(0, 10);  // Max 10 chars sender
+      tftMain.drawString(sender + ":", 27, y);
+      
+      // Message text (lighter shade of priority color)
+      uint16_t msgColor =  TFT_LIGHTGREY;
+      // uint16_t msgColor = notifications[i].color;
+      // if (msgColor == TFT_RED) msgColor = TFT_PINK;
+      // else if (msgColor == TFT_YELLOW) msgColor = TFT_ORANGE;
+      // else msgColor = TFT_LIGHTGREY;
+      
+      tftMain.setTextColor(msgColor);
+      
+      String msg = notifications[i].message;
+      if (msg.length() > 47) {
+        msg = msg.substring(0, 47) + "...";  // Truncate + ellipsis
+      }
+      
+      // Wrap message at ~13 chars per line (fits with sender above)
+      String msgLine1 = msg.substring(0, 24);
+      tftMain.drawString(msgLine1, 27, y + 18);
+      
+      if (msg.length() > 24) {
+        String msgLine2 = msg.substring(24);
+        tftMain.drawString(msgLine2, 27, y + 36);
+      }
     }
   }
 }
+
+
