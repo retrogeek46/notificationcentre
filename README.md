@@ -93,7 +93,6 @@ curl -X POST http://notification.local/clear
 └──────────────────────┘
 ```
 
-
 ## 🐛 Troubleshooting
 - **No display**: Check TFT_eSPI `User_Setup.h` pins
 - **Wrong colors**: Verify `slack_icon.h` RGB565 format
@@ -101,7 +100,7 @@ curl -X POST http://notification.local/clear
 - **API timeout**: Response sent before TFT redraw
 
 ## 📸 Screenshots
-*(Add your display photos here)*
+<img width="2050" height="1154" alt="image" src="https://github.com/user-attachments/assets/a16ce0ad-30aa-4b26-bcbe-0ae15a4fd407" />
 
 ## 📝 License
 MIT License - Feel free to use and modify!
