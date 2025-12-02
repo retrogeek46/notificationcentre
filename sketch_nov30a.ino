@@ -29,6 +29,7 @@ uint16_t getPriorityColor(const char* priority);
 void drawAppIcon(int x, int y, String app);
 void drawSlackIcon(int x, int y);
 void handleSimpleNotify();
+String extractSender(String msg);
 void handleFormNotify();
 void handleClearAll();
 void handleRoot();
@@ -191,11 +192,38 @@ void handleSimpleNotify() {
   server.send(200, "text/plain", "OK");
 }
 
+String extractSender(String msg) {
+  Serial.println("extractSender called");
+  
+  if (msg == NULL || msg.length() == 0) {
+    Serial.println("Input message is null or empty");
+    return "";  // Return empty if input is null or empty
+  }
+  
+  Serial.print("Input message: ");
+  Serial.println(msg);
+  
+  int colonIndex = msg.lastIndexOf(':');  // Use lastIndexOf to get colon closest to end
+  Serial.print("Last colon index: ");
+  Serial.println(colonIndex);
+  
+  if (colonIndex != -1) {
+    String sender = msg.substring(colonIndex + 1);
+    sender.trim(); // Remove any leading/trailing spaces
+    Serial.print("Extracted sender: ");
+    Serial.println(sender);
+    return sender;
+  }
+  
+  Serial.println("Failed to extract sender - no colon found");
+  return "";
+}
+
 void handleFormNotify() {
   Serial.println("=== FORM POST ===");
   
   String app = server.arg("app");
-  String from = server.arg("from");
+  String from = extractSender(server.arg("from"));
   String message = server.arg("message");
   String priority = server.arg("priority");
   
@@ -255,7 +283,7 @@ void refreshNotifications() {
       // Sender name (bold color - priority color)
       tftMain.setTextColor(notifications[i].color);
       String sender = notifications[i].from;
-      if (sender.length() > 10) sender = sender.substring(0, 10);  // Max 10 chars sender
+      if (sender.length() > 24) sender = sender.substring(0, 24);  // Max 10 chars sender
       tftMain.drawString(sender + ":", 27, y);
       
       // Message text (lighter shade of priority color)
@@ -274,10 +302,12 @@ void refreshNotifications() {
       
       // Wrap message at ~13 chars per line (fits with sender above)
       String msgLine1 = msg.substring(0, 24);
+      msgLine1.trim();
       tftMain.drawString(msgLine1, 27, y + 18);
       
       if (msg.length() > 24) {
         String msgLine2 = msg.substring(24);
+        msgLine2.trim();
         tftMain.drawString(msgLine2, 27, y + 36);
       }
     }
