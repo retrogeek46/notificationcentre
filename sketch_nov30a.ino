@@ -46,6 +46,7 @@ void setup() {
   tftMain.fillScreen(TFT_BLACK);
   tftMain.setRotation(3);
   
+  tftMain.setFreeFont(&FreeMono9pt7b);
   tftMain.setTextSize(1);
   tftMain.setTextColor(TFT_YELLOW);
   tftMain.drawString("Connect: NotificationSetup", 10, 10);
@@ -197,7 +198,7 @@ String extractSender(String msg) {
   
   if (msg == NULL || msg.length() == 0) {
     Serial.println("Input message is null or empty");
-    return "";  // Return empty if input is null or empty
+    return msg;  // Return empty if input is null or empty
   }
   
   Serial.print("Input message: ");
@@ -216,7 +217,7 @@ String extractSender(String msg) {
   }
   
   Serial.println("Failed to extract sender - no colon found");
-  return "";
+  return msg;
 }
 
 void handleFormNotify() {
@@ -248,31 +249,33 @@ void handleRoot() {
   server.send(200, "text/html", html);
 }
 
+// char previousTimeStr[25] = "";
+
 void updateClock() {
-  tftMain.fillRect(200, 5, 120, 20, TFT_BLACK);
-  tftMain.setTextSize(2);
+  tftMain.fillRect(100, 5, 220, 30, TFT_BLACK);  // Clear clock area
+  tftMain.setTextSize(1);
   tftMain.setTextColor(TFT_CYAN);
   
   time_t now = time(nullptr);
   struct tm timeinfo;
   localtime_r(&now, &timeinfo);
-  char timeStr[20];
-  strftime(timeStr, sizeof(timeStr), "%H:%M:%S", &timeinfo);
+  char timeStr[25];
+  strftime(timeStr, sizeof(timeStr), "%a,%d-%b,%H:%M:%S", &timeinfo);  // Tu,01-Jan,14:40:23
   
-  tftMain.drawString(timeStr, 200, 5);
+  tftMain.drawString(timeStr, 100, 5);
 }
 
 void refreshNotifications() {
   tftMain.fillScreen(TFT_BLACK);
   
   // Header
-  tftMain.setTextSize(2);
+  tftMain.setTextSize(1);
   tftMain.setTextColor(TFT_YELLOW);
-  tftMain.drawString("NOTIFICATIONS", 5, 5);
+  tftMain.drawString("NOTIFS", 5, 5);
   updateClock();
   
   // Notifications - FONT SIZE 2 + SENDER/MESSAGE COLORS + 27 CHAR LIMIT
-  tftMain.setTextSize(2);
+  tftMain.setTextSize(1);
   for (int i = 0; i < 5; i++) {
     int y = 40 + i * 55;
     
