@@ -6,6 +6,12 @@
 #include <time.h>
 #include <pgmspace.h>  // For PROGMEM reading
 #include "slack_icon.h"
+#include <Adafruit_NeoPixel.h>
+
+#define LED_PIN   32      // GPIO connected to Din of strip
+#define LED_COUNT 1      // We'll only use the first LED
+
+Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 #define ICON_HEIGHT 16
 #define ICON_WIDTH 16
@@ -29,6 +35,7 @@ uint16_t getPriorityColor(const char* priority);
 void drawAppIcon(int x, int y, String app);
 void drawSlackIcon(int x, int y);
 void handleSimpleNotify();
+void setNotifLed();
 String extractSender(String msg);
 void handleFormNotify();
 void handleClearAll();
@@ -51,6 +58,10 @@ void setup() {
   tftMain.setTextColor(TFT_YELLOW);
   tftMain.drawString("Connect: NotificationSetup", 10, 10);
   tftMain.drawString("192.168.4.1", 10, 30);
+
+  strip.begin();
+  strip.setBrightness(50);   // 0–255, adjust if too bright
+  strip.show();
   
   WiFiManager wifiManager;
   wifiManager.setConfigPortalTimeout(1800);
@@ -149,12 +160,18 @@ void drawAppIcon(int x, int y, String app) {
   }
 }
 
+void setNotifLed(uint8_t r, uint8_t g, uint8_t b) {
+  strip.setPixelColor(0, strip.Color(r, g, b));
+  strip.show();
+}
+
 void handleClearAll() {
   Serial.println("=== CLEAR ALL NOTIFICATIONS ===");
   for (int i = 0; i < 5; i++) {
     notifications[i] = Notification();
   }
   refreshNotifications();
+  setNotifLed(0, 0, 0);   // LED off
   server.send(200, "application/json", "{\"status\":\"cleared\"}");
 }
 
@@ -174,6 +191,19 @@ void addStructuredNotification(String app, String from, String msg, uint16_t col
   notifications[0].from = from;
   notifications[0].message = msg.substring(0, 48);
   notifications[0].color = color;
+
+  uint8_t r = 0, g = 0, b = 0;
+  if (color == TFT_RED) {
+    // high
+    r = 255; g = 0;   b = 0;
+  } else if (color == TFT_YELLOW) {
+    // medium
+    r = 255; g = 80;  b = 0;
+  } else {
+    // low/other
+    r = 80;  g = 80;  b = 80;
+  }
+  setNotifLed(r, g, b);
   
   refreshNotifications();
 }
@@ -249,29 +279,50 @@ void handleRoot() {
   server.send(200, "text/html", html);
 }
 
-// char previousTimeStr[25] = "";
+char previousTimeStr[25] = "                    ";
+
+void resetPreviousTimeStr() {
+  memset(previousTimeStr, 0, sizeof(previousTimeStr));
+}
 
 void updateClock() {
-  tftMain.fillRect(100, 5, 220, 30, TFT_BLACK);  // Clear clock area
-  tftMain.setTextSize(1);
-  tftMain.setTextColor(TFT_CYAN);
-  
   time_t now = time(nullptr);
   struct tm timeinfo;
   localtime_r(&now, &timeinfo);
   char timeStr[25];
-  strftime(timeStr, sizeof(timeStr), "%a,%d-%b,%H:%M:%S", &timeinfo);  // Tu,01-Jan,14:40:23
+  strftime(timeStr, sizeof(timeStr), "%a,%d-%b,%H:%M:%S", &timeinfo);
+
+  tftMain.setTextSize(1);
+  tftMain.setTextColor(TFT_CYAN);
   
-  tftMain.drawString(timeStr, 100, 5);
+  int x = 100, y = 5;
+  int charHeight = tftMain.fontHeight();
+  int maxCharWidth = tftMain.textWidth("W");  // "W" is typically widest character
+  int cursorX = x;
+
+  for (int i = 0; i < strlen(timeStr); i++) {
+    if (timeStr[i] != previousTimeStr[i] || previousTimeStr[i] == '\0') {
+      // Always clear fixed max width to eliminate artifacts
+      tftMain.fillRect(cursorX, y, maxCharWidth, charHeight, TFT_BLACK);
+      
+      // Draw new character
+      char ch[2] = {timeStr[i], '\0'};
+      tftMain.drawString(ch, cursorX, y);
+    }
+    previousTimeStr[i] = timeStr[i];
+    cursorX += maxCharWidth;  // Fixed spacing prevents overlap
+  }
 }
 
 void refreshNotifications() {
   tftMain.fillScreen(TFT_BLACK);
+  // tftMain.fillRect(0, 30, tftMain.width(), tftMain.height() - 30, TFT_BLACK);
   
   // Header
   tftMain.setTextSize(1);
   tftMain.setTextColor(TFT_YELLOW);
   tftMain.drawString("NOTIFS", 5, 5);
+  resetPreviousTimeStr();
   updateClock();
   
   // Notifications - FONT SIZE 2 + SENDER/MESSAGE COLORS + 27 CHAR LIMIT
