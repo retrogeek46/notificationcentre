@@ -312,60 +312,76 @@ void refreshRemindersDisplay() {
   resetPreviousTimeStr();
   updateClock();
 
-  tftMain.setTextSize(1);
-  int y = 40;
-  int shown = 0;
-  // show upcoming reminders (sorted by time)
-  // quick selection: find earliest not completed reminders
-  for (int r = 0; r < MAX_REMINDERS && shown < 5; r++) {
-    // find the earliest remaining each loop - simple O(n^2) but n small
-    int idx = -1;
-    time_t earliest = INT32_MAX;
-    for (int j = 0; j < MAX_REMINDERS; j++) {
-      if (reminders[j].id != 0 && !reminders[j].completed) {
-        if (reminders[j].when < earliest) {
-          earliest = reminders[j].when;
-          idx = j;
-        }
+  // Build a small list of active reminders and sort by effective time (soonest first).
+  int listIdx[MAX_REMINDERS];
+  time_t listTime[MAX_REMINDERS];
+  bool listTriggered[MAX_REMINDERS];
+  int count = 0;
+
+  for (int i = 0; i < MAX_REMINDERS; i++) {
+    Reminder &r = reminders[i];
+    if (r.id == 0 || r.completed) continue;
+    // effective time: for triggered reminders prefer nextReviewTime if set, otherwise use original when
+    time_t eff = r.triggered ? (r.nextReviewTime != 0 ? r.nextReviewTime : r.when) : r.when;
+    listIdx[count] = i;
+    listTime[count] = eff;
+    listTriggered[count] = r.triggered;
+    count++;
+  }
+
+  // sort: triggered reminders first, then by time within each group
+  for (int a = 0; a < count - 1; a++) {
+    int best = a;
+    for (int b = a + 1; b < count; b++) {
+      // triggered reminders come first
+      if (listTriggered[b] && !listTriggered[best]) {
+        best = b;
+      } else if (listTriggered[b] == listTriggered[best] && listTime[b] < listTime[best]) {
+        // same triggered status: sort by time
+        best = b;
       }
     }
-    if (idx == -1)
-      break; // none left
-    // draw this reminder
-    Reminder &rm = reminders[idx];
-    // simple icon based on priority color
-    tftMain.fillCircle(10, y + 10, 8, rm.color);
-    tftMain.setTextColor(TFT_WHITE);
+    if (best != a) {
+      int ti = listIdx[a]; listIdx[a] = listIdx[best]; listIdx[best] = ti;
+      time_t tt = listTime[a]; listTime[a] = listTime[best]; listTime[best] = tt;
+      bool tb = listTriggered[a]; listTriggered[a] = listTriggered[best]; listTriggered[best] = tb;
+    }
+  }
+
+  // display up to 5 reminders (triggered first, then soonest)
+  int y = 40;
+  int shown = 0;
+  for (int s = 0; s < count && shown < 5; s++) {
+    Reminder &rm = reminders[listIdx[s]];
+    // icon color: active (triggered) -> red; non-triggered -> grey
+    uint16_t iconColor = rm.triggered ? TFT_RED : TFT_DARKGREY;
+    tftMain.fillCircle(10, y + 10, 8, iconColor);
+    tftMain.drawCircle(10, y + 10, 8, TFT_WHITE);
+    
+    // title text: active (triggered) -> white; non-triggered -> slightly grey
+    tftMain.setTextColor(rm.triggered ? TFT_WHITE : TFT_LIGHTGREY);
     String title = rm.title;
-    if (title.length() > 24)
-      title = title.substring(0, 24) + "...";
+    if (title.length() > 24) title = title.substring(0, 24) + "...";
     tftMain.drawString(title, 30, y);
 
-    // time display
+    // time display uses the effective time we sorted on
+    time_t effTime = listTime[s];
     struct tm tm;
-    localtime_r(&rm.when, &tm);
+    localtime_r(&effTime, &tm);
     char buf[20];
     strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M", &tm);
     tftMain.setTextColor(TFT_LIGHTGREY);
     tftMain.drawString(String(buf), 30, y + 18);
 
-    // message (single line)
+    // message (single line) - use same color as title for readability
+    tftMain.setTextColor(rm.triggered ? TFT_WHITE : TFT_LIGHTGREY);
     String msg = rm.message;
-    if (msg.length() > 32)
-      msg = msg.substring(0, 32) + "...";
+    if (msg.length() > 32) msg = msg.substring(0, 32) + "...";
     tftMain.drawString(msg, 30, y + 36);
 
-    // mark shown so we don't show again in next iteration
-    reminders[idx].id = reminders[idx].id; // keep as is
-    // make it invisible in selection by temporarily marking time large
-    reminders[idx].when = INT32_MAX;
     shown++;
     y += 55;
   }
-
-  // restore original times (we mutated them above), easier: rebuild display using a sorted small vector in next iteration
-  // Simpler approach: don't mutate; above mutation isn't ideal. But to keep complexity low for now, we'll simply call screenDirty frequently.
-  // (If you want, I can refactor to a stable sort of active reminders.)
 }
 
 // ----------------- Reminder logic -----------------
@@ -444,8 +460,6 @@ void checkReminders() {
       r.nextReviewTime = now + (time_t)r.limitMinutes * 60; // schedule next one
       Serial.printf("Reminder follow-up id=%d reviewCount=%d\n", r.id, r.reviewCount);
       triggerReminderVisuals(r);
-      // Also add into main notifications for visibility
-      addStructuredNotification("reminder", r.title, r.message, r.color);
     }
   }
 }
@@ -479,6 +493,8 @@ void addStructuredNotification(String app, String from, String msg, uint16_t col
     bb = 0;
   }
   setNotifLed(rr, gg, bb);
+  // Switch to notifications screen when a notification arrives
+  currentScreen = SCREEN_NOTIFS;
   screenDirty = true;
 }
 
@@ -584,6 +600,9 @@ void handleAddReminder(AsyncWebServerRequest *request) {
 
   scheduleReminder(reminders[idx]);
 
+  // Force screen refresh to show new reminder immediately
+  screenDirty = true;
+
   Serial.printf("Added reminder id=%d title=%s when=%ld limit=%d\n", reminders[idx].id, reminders[idx].title.c_str(), reminders[idx].when, reminders[idx].limitMinutes);
   request->send(200, "application/json", String("{\"status\":\"added\",\"id\":") + String(reminders[idx].id) + String("}"));
 }
@@ -648,18 +667,6 @@ void handleScreenSwitch(AsyncWebServerRequest *request) {
     currentScreen = SCREEN_NOTIFS;
   screenDirty = true;
   request->send(200, "application/json", "{\"status\":\"ok\",\"screen\":\"" + String((currentScreen == SCREEN_REMINDER) ? "reminder" : "notifs") + "\"}");
-}
-
-// ----------------- Utility / leftover handlers -----------------
-void handleSimpleNotify(AsyncWebServerRequest *request) {
-  String app = request->hasParam("app", true) ? request->getParam("app", true)->value() : "App";
-  String from = request->hasParam("from", true) ? request->getParam("from", true)->value() : "Unknown";
-  String message = request->hasParam("message", true) ? request->getParam("message", true)->value() : "Notification";
-  String priority = request->hasParam("priority", true) ? request->getParam("priority", true)->value() : "";
-
-  Serial.println("SimpleNotify: " + app + " - " + from + " - " + message);
-  addStructuredNotification(app, from, message, getPriorityColor(priority.c_str()));
-  request->send(200, "text/plain", "OK");
 }
 
 // motor stuff
