@@ -351,25 +351,54 @@ void refreshRemindersDisplay() {
   // display up to 5 reminders (triggered first, then soonest)
   int y = 40;
   int shown = 0;
+  time_t now = time(nullptr);
+
   for (int s = 0; s < count && shown < 5; s++) {
     Reminder &rm = reminders[listIdx[s]];
     // icon color: active (triggered) -> red; non-triggered -> grey
     uint16_t iconColor = rm.triggered ? TFT_RED : TFT_DARKGREY;
     tftMain.fillCircle(10, y + 10, 8, iconColor);
     tftMain.drawCircle(10, y + 10, 8, TFT_WHITE);
-    
+
     // title text: active (triggered) -> white; non-triggered -> slightly grey
     tftMain.setTextColor(rm.triggered ? TFT_WHITE : TFT_LIGHTGREY);
     String title = rm.title;
-    if (title.length() > 24) title = title.substring(0, 24) + "...";
-    tftMain.drawString(title, 30, y);
+    if (title.length() > 0) {
+      if (title.length() > 24) title = title.substring(0, 24) + "...";
+    }
+    // Show ID and title (if present)
+    String titleLine = "[" + String(rm.id) + "]";
+    if (title.length() > 0) {
+      titleLine += " " + title;
+    }
+    tftMain.drawString(titleLine, 30, y);
 
-    // time display uses the effective time we sorted on
+    // time display: show relative time (xD yH zM) for future reminders, absolute time for triggered
     time_t effTime = listTime[s];
-    struct tm tm;
-    localtime_r(&effTime, &tm);
     char buf[20];
-    strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M", &tm);
+    if (rm.triggered) {
+      // for triggered, show absolute time
+      struct tm tm;
+      localtime_r(&effTime, &tm);
+      strftime(buf, sizeof(buf), "%H:%M", &tm);
+    } else {
+      // for future, show relative time
+      long diff = effTime - now;
+      long days = diff / 86400;
+      long hours = (diff % 86400) / 3600;
+      long mins = (diff % 3600) / 60;
+
+      buf[0] = '\0';
+      if (days > 0) {
+        sprintf(buf + strlen(buf), "%ldD ", days);
+      }
+      if (hours > 0) {
+        sprintf(buf + strlen(buf), "%ldH ", hours);
+      }
+      if (mins > 0 || buf[0] == '\0') {
+        sprintf(buf + strlen(buf), "%ldM", mins);
+      }
+    }
     tftMain.setTextColor(TFT_LIGHTGREY);
     tftMain.drawString(String(buf), 30, y + 18);
 
@@ -562,8 +591,9 @@ void handleAddReminder(AsyncWebServerRequest *request) {
   String priority = request->hasParam("priority", true) ? request->getParam("priority", true)->value()
                                                         : (request->hasParam("priority") ? request->getParam("priority")->value() : "normal");
 
-  if (title.length() == 0 || timestr.length() == 0) {
-    request->send(400, "application/json", "{\"error\":\"Missing title or time (yyyy-mm-dd hh:mm)\"}");
+  // title is now optional; only time is required
+  if (timestr.length() == 0) {
+    request->send(400, "application/json", "{\"error\":\"Missing time (yyyy-mm-dd hh:mm)\"}");
     return;
   }
 
