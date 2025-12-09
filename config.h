@@ -16,7 +16,7 @@
 
 // ===== Text Truncation Limits =====
 #define NOTIF_SENDER_MAX_CHARS 24
-#define NOTIF_MSG_MAX_CHARS 47
+#define NOTIF_MSG_MAX_CHARS 55
 #define NOTIF_MSG_LINE_CHARS 20
 #define REMINDER_MSG_MAX_CHARS 20
 
