@@ -1,6 +1,6 @@
 /**
  * Notification Center - ESP32
- * 
+ *
  * A modular notification and reminder display system
  * with zone-based screen rendering for minimal flicker.
  */
@@ -9,6 +9,7 @@
 #include "config.h"
 #include "state.h"
 #include "led_control.h"
+#include "motor_control.h"
 #include "network.h"
 #include "screen.h"
 #include "api_handlers.h"
@@ -18,23 +19,24 @@
 // ==================== Setup ====================
 void setup() {
   Serial.begin(115200);
-  
+
   // Initialize modules
   initLed();
+  initMotor();
   initScreen();
   initState();
-  
+
   // Network (shows status on screen)
   initWiFi();
   initNTP();
-  
+
   // Start HTTP server
   setupApiRoutes();
-  
+
   // Initial screen draw
   setAllZonesDirty();
   refreshScreen();
-  
+
   Serial.println("Notification Center ready!");
 }
 
@@ -46,22 +48,22 @@ void loop() {
     updateClock();
     lastClock = millis();
   }
-  
+
   // Check reminders
   checkReminders();
-  
+
   // Refresh reminder screen periodically (for countdown updates)
   static unsigned long lastReminderRefresh = 0;
   if (currentScreen == SCREEN_REMINDER && millis() - lastReminderRefresh > REMINDER_REFRESH_INTERVAL) {
     setZoneDirty(ZONE_CONTENT);
     lastReminderRefresh = millis();
   }
-  
+
   // Refresh dirty zones
   refreshScreen();
-  
+
   // WiFi reconnect check
   checkWiFiReconnect();
-  
+
   yield();
 }

@@ -5,6 +5,16 @@
 #define LED_PIN 32
 #define LED_COUNT 1
 
+// Motor driver pins (L298N Motor A) - Left side only
+#define MOTOR_ENA 33   // PWM speed control
+#define MOTOR_IN1 13   // Direction (always HIGH for forward)
+// IN2 should be hardwired to GND on L298N (single direction)
+
+// Motor PWM settings
+#define MOTOR_PWM_CHANNEL 0
+#define MOTOR_PWM_FREQ    1000   // 1 kHz
+#define MOTOR_PWM_RES     8      // 8-bit = 0-255
+
 // ===== Icon Dimensions =====
 #define ICON_HEIGHT 16
 #define ICON_WIDTH 16

@@ -16,5 +16,6 @@ void handleListReminders(AsyncWebServerRequest* request);
 void handleCompleteReminder(AsyncWebServerRequest* request);
 void handleNowPlaying(AsyncWebServerRequest* request);
 void handleScreenSwitch(AsyncWebServerRequest* request);
+void handleMotorSet(AsyncWebServerRequest* request);
 
 #endif

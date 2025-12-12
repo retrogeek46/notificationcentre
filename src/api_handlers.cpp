@@ -4,6 +4,7 @@
 #include "notif_screen.h"
 #include "reminder_screen.h"
 #include "led_control.h"
+#include "motor_control.h"
 
 AsyncWebServer server(80);
 
@@ -23,6 +24,9 @@ void setupApiRoutes() {
 
   // Now playing
   server.on("/nowplaying", HTTP_POST, handleNowPlaying);
+
+  // Motor control
+  server.on("/motor", HTTP_POST, handleMotorSet);
 
   // Root
   server.on("/", HTTP_GET, handleRoot);
@@ -148,5 +152,22 @@ void handleRoot(AsyncWebServerRequest* request) {
   html += "<p>Use <b>/completeReminder?id=...</b> POST to mark done</p>";
   html += "<p>Use <b>/screen?name=notifs|reminder</b> POST to switch</p>";
   html += "<p>Use <b>/nowplaying</b> POST with song, artist</p>";
+  html += "<p>Use <b>/motor</b> POST with speed=0..255</p>";
   request->send(200, "text/html", html);
+}
+
+// ==================== Motor Handler ====================
+void handleMotorSet(AsyncWebServerRequest* request) {
+  if (!request->hasParam("speed", true)) {
+    request->send(400, "application/json", "{\"error\":\"Missing speed\"}");
+    return;
+  }
+
+  String s = request->getParam("speed", true)->value();
+  int val = s.toInt();
+  val = constrain(val, 0, 255);
+  setMotorRaw(val);
+
+  String resp = "{\"speed\":" + String(val) + "}";
+  request->send(200, "application/json", resp);
 }
