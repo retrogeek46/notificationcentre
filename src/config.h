@@ -15,6 +15,10 @@
 #define MOTOR_PWM_FREQ    1000   // 1 kHz
 #define MOTOR_PWM_RES     8      // 8-bit = 0-255
 
+// Button pins (input-only GPIOs, external pull-up required)
+#define BTN_CLEAR_NOTIFS  35     // Clear all notifications
+#define BTN_DEBOUNCE_MS   50     // Debounce delay in ms
+
 // ===== Icon Dimensions =====
 #define ICON_HEIGHT 16
 #define ICON_WIDTH 16

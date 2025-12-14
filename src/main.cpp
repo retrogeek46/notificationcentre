@@ -8,8 +8,10 @@
 #include <Arduino.h>
 #include "config.h"
 #include "state.h"
+#include "storage.h"
 #include "led_control.h"
 #include "motor_control.h"
+#include "button_control.h"
 #include "network.h"
 #include "screen.h"
 #include "api_handlers.h"
@@ -23,8 +25,10 @@ void setup() {
   // Initialize modules
   initLed();
   initMotor();
+  initButtons();
   initScreen();
   initState();
+  initStorage();  // Load persisted reminders
 
   // Network (shows status on screen)
   initWiFi();
@@ -64,6 +68,9 @@ void loop() {
 
   // WiFi reconnect check
   checkWiFiReconnect();
+
+  // Check physical buttons
+  checkButtons();
 
   yield();
 }
