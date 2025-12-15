@@ -47,6 +47,13 @@
 #define WIFI_CHECK_INTERVAL 30000
 #define WIFI_PORTAL_TIMEOUT 1800
 
+// ===== Now Playing Configuration =====
+#define NOW_PLAYING_SCROLL_SPEED 200   // ms between scroll steps (slower)
+#define NOW_PLAYING_DISC_SPEED 400     // ms between disc rotation frames (slower)
+#define NOW_PLAYING_TIMEOUT 300000     // 5 min auto-clear
+#define NOW_PLAYING_TEXT_X 22          // Text start X (after disc icon)
+#define NOW_PLAYING_TEXT_WIDTH 298     // Available width for text (320 - 22)
+
 // ===== NTP Configuration =====
 #define NTP_TIMEZONE_OFFSET (5.5 * 3600)  // IST +5:30
 

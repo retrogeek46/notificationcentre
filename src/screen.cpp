@@ -3,14 +3,12 @@
 #include "config.h"
 #include "notif_screen.h"
 #include "reminder_screen.h"
+#include "icons/icons.h"
 #include <time.h>
 
 TFT_eSPI tft = TFT_eSPI();
 
 static char previousTimeStr[25] = "                    ";
-
-// ==================== Constants for Now Playing ====================
-const unsigned long NOW_PLAYING_TIMEOUT = 300000; // 5 minutes
 
 // ==================== Init ====================
 void initScreen() {
@@ -26,7 +24,7 @@ void clearZone(Zone zone) {
   int y_start, y_end;
   int x_start = 0;
   int width = 320;
-  
+
   switch (zone) {
     case ZONE_TITLE:
       y_start = ZONE_TITLE_Y_START;
@@ -50,7 +48,7 @@ void clearZone(Zone zone) {
     default:
       return;
   }
-  
+
   tft.fillRect(x_start, y_start, width, y_end - y_start + 1, COLOR_BACKGROUND);
 }
 
@@ -58,7 +56,7 @@ void clearZone(Zone zone) {
 void drawTitle() {
   tft.setTextSize(1);
   tft.setTextColor(COLOR_HEADER);
-  
+
   const char* title = (currentScreen == SCREEN_NOTIFS) ? "NOTIFS" : "REMINDER";
   tft.drawString(title, 5, 5);
 }
@@ -94,26 +92,123 @@ void updateClock() {
     cursorX += maxCharWidth;
   }
 }
-
 // ==================== Status Zone (Now Playing) ====================
+// Store previous text for erase-by-redraw technique
+static String prevNowPlayingText = "";
+static bool npFirstDraw = true;
+
 void drawNowPlaying() {
-  // Check timeout
-  if (nowPlayingSong.length() == 0 || (millis() - nowPlayingUpdated > NOW_PLAYING_TIMEOUT)) {
+  const int textX = NOW_PLAYING_TEXT_X;
+  const int textY = 22;
+
+  // Always draw disc icon directly (it's small and fast)
+  drawDiscIcon(3, 20, discFrame, nowPlayingActive);
+
+  // If not active or no song, erase previous text and clear state
+  if (!nowPlayingActive || nowPlayingSong.length() == 0) {
+    if (prevNowPlayingText.length() > 0) {
+      // Erase by drawing previous text in black
+      tft.setTextColor(COLOR_BACKGROUND);
+      tft.drawString(prevNowPlayingText, textX, textY);
+      prevNowPlayingText = "";
+    }
+    npFirstDraw = true;
     return;
   }
-  
-  tft.setTextColor(TFT_MAGENTA);
-  String display = nowPlayingSong;
+
+  // Check timeout
+  if (millis() - nowPlayingUpdated > NOW_PLAYING_TIMEOUT) {
+    nowPlayingActive = false;
+    if (prevNowPlayingText.length() > 0) {
+      tft.setTextColor(COLOR_BACKGROUND);
+      tft.drawString(prevNowPlayingText, textX, textY);
+      prevNowPlayingText = "";
+    }
+    npFirstDraw = true;
+    return;
+  }
+
+  // Build full display string
+  String fullText = nowPlayingSong;
   if (nowPlayingArtist.length() > 0) {
-    display += " - " + nowPlayingArtist;
+    fullText += " - " + nowPlayingArtist;
   }
-  
-  // Truncate if too long
-  if (display.length() > 30) {
-    display = display.substring(0, 30) + "...";
+  fullText += "    ";
+
+  // Calculate visible portion
+  int textLen = fullText.length();
+  int scrollPos = nowPlayingScrollPos % textLen;
+
+  // Create visible substring
+  String visible = "";
+  int charsNeeded = 26;
+  for (int i = 0; i < charsNeeded; i++) {
+    int idx = (scrollPos + i) % textLen;
+    visible += fullText.charAt(idx);
   }
-  
-  tft.drawString(display, 5, 22);
+
+  // Text-erase technique:
+  // 1. Erase previous text by drawing it in black (only if different or first draw)
+  if (prevNowPlayingText != visible || npFirstDraw) {
+    if (prevNowPlayingText.length() > 0 && !npFirstDraw) {
+      tft.setTextColor(COLOR_BACKGROUND);
+      tft.drawString(prevNowPlayingText, textX, textY);
+    }
+
+    // 2. Draw new text in color
+    tft.setTextColor(TFT_MAGENTA);
+    tft.drawString(visible, textX, textY);
+
+    // 3. Remember for next frame
+    prevNowPlayingText = visible;
+    npFirstDraw = false;
+  }
+}
+
+// ==================== Now Playing Ticker Update ====================
+void updateNowPlayingTicker() {
+  unsigned long now = millis();
+
+  // Always update disc animation (even when not playing, for smooth transitions)
+  static bool lastDiscNeedsRedraw = false;
+  bool discNeedsRedraw = false;
+
+  if (now - lastDiscUpdate >= NOW_PLAYING_DISC_SPEED) {
+    if (nowPlayingActive) {
+      discFrame = (discFrame + 1) % 8;  // 8 frames for smoother animation
+      discNeedsRedraw = true;
+    }
+    lastDiscUpdate = now;
+  }
+
+  // If not active, only redraw disc if state changed
+  if (!nowPlayingActive || nowPlayingSong.length() == 0) {
+    if (discNeedsRedraw != lastDiscNeedsRedraw) {
+      setZoneDirty(ZONE_STATUS);
+      lastDiscNeedsRedraw = discNeedsRedraw;
+    }
+    return;
+  }
+
+  // Check for timeout
+  if (millis() - nowPlayingUpdated > NOW_PLAYING_TIMEOUT) {
+    nowPlayingActive = false;
+    setZoneDirty(ZONE_STATUS);
+    return;
+  }
+
+  bool needsRedraw = discNeedsRedraw;
+
+  // Update scroll position
+  if (now - lastScrollUpdate >= NOW_PLAYING_SCROLL_SPEED) {
+    nowPlayingScrollPos++;
+    lastScrollUpdate = now;
+    needsRedraw = true;
+  }
+
+  if (needsRedraw) {
+    setZoneDirty(ZONE_STATUS);
+  }
 }
 
 // ==================== Main Refresh ====================
@@ -125,16 +220,16 @@ void refreshScreen() {
     resetPreviousTimeStr();  // Force clock redraw after title change
     clearZoneDirty(ZONE_TITLE);
   }
-  
+
   // Clock is handled separately by updateClock() for partial updates
-  
+
   // Status zone (Now Playing)
   if (isZoneDirty(ZONE_STATUS)) {
     clearZone(ZONE_STATUS);
     drawNowPlaying();
     clearZoneDirty(ZONE_STATUS);
   }
-  
+
   // Content zone
   if (isZoneDirty(ZONE_CONTENT)) {
     clearZone(ZONE_CONTENT);

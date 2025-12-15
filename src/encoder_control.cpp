@@ -5,7 +5,7 @@
 // Encoder state
 static int lastCLK = HIGH;
 static bool motorRunning = false;
-static int targetSpeed = 128;  // Default mid-speed
+static int targetSpeed = 0;  // Default mid-speed
 
 // Button state
 static bool lastBtnState = HIGH;

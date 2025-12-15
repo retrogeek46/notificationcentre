@@ -17,5 +17,6 @@ void drawAppIcon(int x, int y, String app);
 
 // Individual icon drawers
 void drawSlackIcon(int x, int y);
+void drawDiscIcon(int x, int y, int frame, bool spinning);
 
 #endif

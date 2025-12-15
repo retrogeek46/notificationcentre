@@ -116,9 +116,29 @@ void handleNowPlaying(AsyncWebServerRequest* request) {
   String song = request->hasParam("song", true) ? request->getParam("song", true)->value() : "";
   String artist = request->hasParam("artist", true) ? request->getParam("artist", true)->value() : "";
 
+  // If song is empty, clear now playing (but preserve disc frame state)
+  if (song.length() == 0) {
+    nowPlayingSong = "";
+    nowPlayingArtist = "";
+    nowPlayingActive = false;
+    nowPlayingScrollPos = 0;
+    // Don't reset discFrame - keep current position for resume
+    setZoneDirty(ZONE_STATUS);
+
+    Serial.println("Now Playing: cleared");
+    request->send(200, "application/json", "{\"status\":\"cleared\"}");
+    return;
+  }
+
+  // New song - reset scroll position but preserve disc frame
   nowPlayingSong = song;
   nowPlayingArtist = artist;
   nowPlayingUpdated = millis();
+  nowPlayingScrollPos = 0;
+  lastScrollUpdate = millis();
+  // Don't reset discFrame - keep spinning from current position
+  lastDiscUpdate = millis();
+  nowPlayingActive = true;
   setZoneDirty(ZONE_STATUS);
 
   Serial.printf("Now Playing: %s - %s\n", song.c_str(), artist.c_str());

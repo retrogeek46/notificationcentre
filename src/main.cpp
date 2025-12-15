@@ -65,6 +65,9 @@ void loop() {
     lastReminderRefresh = millis();
   }
 
+  // Update now playing scrolling ticker
+  updateNowPlayingTicker();
+
   // Refresh dirty zones
   refreshScreen();
 

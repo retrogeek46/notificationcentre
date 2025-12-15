@@ -19,6 +19,11 @@ int nextReminderId = 1;
 String nowPlayingSong = "";
 String nowPlayingArtist = "";
 unsigned long nowPlayingUpdated = 0;
+int nowPlayingScrollPos = 0;
+unsigned long lastScrollUpdate = 0;
+int discFrame = 0;
+unsigned long lastDiscUpdate = 0;
+bool nowPlayingActive = false;
 
 // ==================== Helper Functions ====================
 void initState() {
@@ -35,6 +40,11 @@ void initState() {
   nowPlayingSong = "";
   nowPlayingArtist = "";
   nowPlayingUpdated = 0;
+  nowPlayingScrollPos = 0;
+  lastScrollUpdate = 0;
+  discFrame = 0;
+  lastDiscUpdate = 0;
+  nowPlayingActive = false;
   nextReminderId = 1;
 }
 
