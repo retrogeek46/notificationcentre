@@ -93,100 +93,99 @@ void updateClock() {
   }
 }
 // ==================== Status Zone (Now Playing) ====================
-// Store previous text for erase-by-redraw technique
-static String prevNowPlayingText = "";
-static bool npFirstDraw = true;
+// Sprite for flicker-free rendering
+static TFT_eSprite npSprite = TFT_eSprite(&tft);
+static bool npSpriteCreated = false;
+static bool npZoneCleared = false;  // One-time zone clear
 
 void drawNowPlaying() {
-  const int textX = NOW_PLAYING_TEXT_X;
-  const int textY = 22;
+  const int zoneY = 19;
+  const int zoneH = 18;
 
-  // Always draw disc icon directly (it's small and fast)
-  drawDiscIcon(3, 20, discFrame, nowPlayingActive);
-
-  // If not active or no song, erase previous text and clear state
-  if (!nowPlayingActive || nowPlayingSong.length() == 0) {
-    if (prevNowPlayingText.length() > 0) {
-      // Erase by drawing previous text in black
-      tft.setTextColor(COLOR_BACKGROUND);
-      tft.drawString(prevNowPlayingText, textX, textY);
-      prevNowPlayingText = "";
-    }
-    npFirstDraw = true;
-    return;
+  // One-time zone clear to remove setup messages (WiFi OK, etc)
+  if (!npZoneCleared) {
+    tft.fillRect(0, zoneY, 320, zoneH, COLOR_BACKGROUND);
+    npZoneCleared = true;
   }
 
-  // Check timeout
-  if (millis() - nowPlayingUpdated > NOW_PLAYING_TIMEOUT) {
+  // Create sprite once (320x18 covers entire status zone)
+  if (!npSpriteCreated) {
+    npSprite.createSprite(320, zoneH);
+    npSprite.setFreeFont(&FreeMono9pt7b);
+    npSpriteCreated = true;
+  }
+
+  // Render everything to sprite first
+  npSprite.fillSprite(COLOR_BACKGROUND);
+
+  // Draw disc icon to sprite - always spinning, color depends on state
+  int cx = 11;  // 3 + 8
+  int cy = 9;   // 1 + 8
+  uint16_t discColor = nowPlayingActive ? TFT_WHITE : 0x2104;  // Very dark gray when idle
+
+  npSprite.drawCircle(cx, cy, 7, discColor);
+  npSprite.fillCircle(cx, cy, 2, discColor);
+
+  // Always draw spinning triangles (using current discFrame)
+  float angle = (discFrame * 45.0) * PI / 180.0;
+  int t1x1 = cx + (int)(3 * cos(angle));
+  int t1y1 = cy + (int)(3 * sin(angle));
+  int t1x2 = cx + (int)(6 * cos(angle - 0.4));
+  int t1y2 = cy + (int)(6 * sin(angle - 0.4));
+  int t1x3 = cx + (int)(6 * cos(angle + 0.4));
+  int t1y3 = cy + (int)(6 * sin(angle + 0.4));
+  npSprite.fillTriangle(t1x1, t1y1, t1x2, t1y2, t1x3, t1y3, discColor);
+
+  float angle2 = angle + PI;
+  int t2x1 = cx + (int)(3 * cos(angle2));
+  int t2y1 = cy + (int)(3 * sin(angle2));
+  int t2x2 = cx + (int)(6 * cos(angle2 - 0.4));
+  int t2y2 = cy + (int)(6 * sin(angle2 - 0.4));
+  int t2x3 = cx + (int)(6 * cos(angle2 + 0.4));
+  int t2y3 = cy + (int)(6 * sin(angle2 + 0.4));
+  npSprite.fillTriangle(t2x1, t2y1, t2x2, t2y2, t2x3, t2y3, discColor);
+
+  // Draw scrolling text if active
+  if (nowPlayingActive && nowPlayingSong.length() > 0 &&
+      millis() - nowPlayingUpdated <= NOW_PLAYING_TIMEOUT) {
+
+    String fullText = nowPlayingSong;
+    if (nowPlayingArtist.length() > 0) {
+      fullText += " - " + nowPlayingArtist;
+    }
+    fullText += "    ";
+
+    int textLen = fullText.length();
+    int scrollPos = nowPlayingScrollPos % textLen;
+
+    String visible = "";
+    for (int i = 0; i < 26; i++) {
+      visible += fullText.charAt((scrollPos + i) % textLen);
+    }
+
+    npSprite.setTextColor(TFT_MAGENTA);
+    npSprite.drawString(visible, 22, 3);
+  } else if (millis() - nowPlayingUpdated > NOW_PLAYING_TIMEOUT) {
     nowPlayingActive = false;
-    if (prevNowPlayingText.length() > 0) {
-      tft.setTextColor(COLOR_BACKGROUND);
-      tft.drawString(prevNowPlayingText, textX, textY);
-      prevNowPlayingText = "";
-    }
-    npFirstDraw = true;
-    return;
   }
 
-  // Build full display string
-  String fullText = nowPlayingSong;
-  if (nowPlayingArtist.length() > 0) {
-    fullText += " - " + nowPlayingArtist;
-  }
-  fullText += "    ";
-
-  // Calculate visible portion
-  int textLen = fullText.length();
-  int scrollPos = nowPlayingScrollPos % textLen;
-
-  // Create visible substring
-  String visible = "";
-  int charsNeeded = 26;
-  for (int i = 0; i < charsNeeded; i++) {
-    int idx = (scrollPos + i) % textLen;
-    visible += fullText.charAt(idx);
-  }
-
-  // Text-erase technique:
-  // 1. Erase previous text by drawing it in black (only if different or first draw)
-  if (prevNowPlayingText != visible || npFirstDraw) {
-    if (prevNowPlayingText.length() > 0 && !npFirstDraw) {
-      tft.setTextColor(COLOR_BACKGROUND);
-      tft.drawString(prevNowPlayingText, textX, textY);
-    }
-
-    // 2. Draw new text in color
-    tft.setTextColor(TFT_MAGENTA);
-    tft.drawString(visible, textX, textY);
-
-    // 3. Remember for next frame
-    prevNowPlayingText = visible;
-    npFirstDraw = false;
-  }
+  // Push to screen atomically
+  npSprite.pushSprite(0, zoneY);
 }
 
 // ==================== Now Playing Ticker Update ====================
 void updateNowPlayingTicker() {
   unsigned long now = millis();
 
-  // Always update disc animation (even when not playing, for smooth transitions)
-  static bool lastDiscNeedsRedraw = false;
-  bool discNeedsRedraw = false;
-
+  // Always update disc animation (spinning even when not playing)
   if (now - lastDiscUpdate >= NOW_PLAYING_DISC_SPEED) {
-    if (nowPlayingActive) {
-      discFrame = (discFrame + 1) % 8;  // 8 frames for smoother animation
-      discNeedsRedraw = true;
-    }
+    discFrame = (discFrame + 1) % 8;  // 8 frames for smoother animation
     lastDiscUpdate = now;
+    setZoneDirty(ZONE_STATUS);  // Always redraw when disc frame changes
   }
 
-  // If not active, only redraw disc if state changed
+  // If not active, we still need to redraw for disc animation
   if (!nowPlayingActive || nowPlayingSong.length() == 0) {
-    if (discNeedsRedraw != lastDiscNeedsRedraw) {
-      setZoneDirty(ZONE_STATUS);
-      lastDiscNeedsRedraw = discNeedsRedraw;
-    }
     return;
   }
 
@@ -197,7 +196,7 @@ void updateNowPlayingTicker() {
     return;
   }
 
-  bool needsRedraw = discNeedsRedraw;
+  bool needsRedraw = false;
 
   // Update scroll position
   if (now - lastScrollUpdate >= NOW_PLAYING_SCROLL_SPEED) {
@@ -223,9 +222,8 @@ void refreshScreen() {
 
   // Clock is handled separately by updateClock() for partial updates
 
-  // Status zone (Now Playing)
+  // Status zone (Now Playing) - no clearZone, drawNowPlaying handles its own updates
   if (isZoneDirty(ZONE_STATUS)) {
-    clearZone(ZONE_STATUS);
     drawNowPlaying();
     clearZoneDirty(ZONE_STATUS);
   }
