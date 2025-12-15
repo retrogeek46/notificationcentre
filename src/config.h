@@ -19,6 +19,13 @@
 #define BTN_CLEAR_NOTIFS  35     // Clear all notifications
 #define BTN_DEBOUNCE_MS   50     // Debounce delay in ms
 
+// Rotary encoder pins (input-only GPIOs, external pull-up required)
+#define ENCODER_CLK       36     // Rotation signal A
+#define ENCODER_DT        39     // Rotation signal B
+#define ENCODER_SW        34     // Push button
+#define ENCODER_SPEED_STEP 15    // Speed change per click
+#define ENCODER_MIN_SPEED  50    // Minimum motor speed
+
 // ===== Icon Dimensions =====
 #define ICON_HEIGHT 16
 #define ICON_WIDTH 16

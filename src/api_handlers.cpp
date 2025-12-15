@@ -81,7 +81,7 @@ void handleAddReminder(AsyncWebServerRequest* request) {
 
   int limitMins = limitStr.toInt();
   int id = addReminder(message, when, limitMins, getPriorityColor(priority.c_str()));
-  
+
   if (id == -1) {
     request->send(500, "application/json", "{\"error\":\"Max reminders reached\"}");
     return;
@@ -102,7 +102,7 @@ void handleCompleteReminder(AsyncWebServerRequest* request) {
     request->send(400, "application/json", "{\"error\":\"Missing id\"}");
     return;
   }
-  
+
   int id = idStr.toInt();
   if (completeReminder(id)) {
     request->send(200, "application/json", "{\"status\":\"completed\"}");
@@ -115,12 +115,12 @@ void handleCompleteReminder(AsyncWebServerRequest* request) {
 void handleNowPlaying(AsyncWebServerRequest* request) {
   String song = request->hasParam("song", true) ? request->getParam("song", true)->value() : "";
   String artist = request->hasParam("artist", true) ? request->getParam("artist", true)->value() : "";
-  
+
   nowPlayingSong = song;
   nowPlayingArtist = artist;
   nowPlayingUpdated = millis();
   setZoneDirty(ZONE_STATUS);
-  
+
   Serial.printf("Now Playing: %s - %s\n", song.c_str(), artist.c_str());
   request->send(200, "application/json", "{\"status\":\"ok\"}");
 }
@@ -128,7 +128,7 @@ void handleNowPlaying(AsyncWebServerRequest* request) {
 // ==================== Screen Switch Handler ====================
 void handleScreenSwitch(AsyncWebServerRequest* request) {
   String name = request->hasParam("name") ? request->getParam("name")->value() : "";
-  
+
   if (name == "reminder") {
     currentScreen = SCREEN_REMINDER;
     updateLedForScreen(SCREEN_REMINDER);
@@ -136,11 +136,11 @@ void handleScreenSwitch(AsyncWebServerRequest* request) {
     currentScreen = SCREEN_NOTIFS;
     updateLedForScreen(SCREEN_NOTIFS);
   }
-  
+
   setZoneDirty(ZONE_TITLE);
   setZoneDirty(ZONE_CONTENT);
-  
-  request->send(200, "application/json", 
+
+  request->send(200, "application/json",
     "{\"status\":\"ok\",\"screen\":\"" + String((currentScreen == SCREEN_REMINDER) ? "reminder" : "notifs") + "\"}");
 }
 

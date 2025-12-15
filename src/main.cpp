@@ -12,6 +12,7 @@
 #include "led_control.h"
 #include "motor_control.h"
 #include "button_control.h"
+#include "encoder_control.h"
 #include "network.h"
 #include "screen.h"
 #include "api_handlers.h"
@@ -26,6 +27,7 @@ void setup() {
   initLed();
   initMotor();
   initButtons();
+  initEncoder();
   initScreen();
   initState();
   initStorage();  // Load persisted reminders
@@ -71,6 +73,9 @@ void loop() {
 
   // Check physical buttons
   checkButtons();
+
+  // Check rotary encoder
+  checkEncoder();
 
   yield();
 }
