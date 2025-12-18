@@ -27,6 +27,19 @@ void initWiFi() {
     ESP.restart();
   }
 
+  // Set static IP after WiFiManager connects
+  // NOTE: Also update tools/media_watcher.py if you change this IP
+  IPAddress staticIP(192, 168, 1, 246);
+  IPAddress gateway(192, 168, 1, 1);
+  IPAddress subnet(255, 255, 255, 0);
+  IPAddress dns(192, 168, 1, 1);
+
+  if (!WiFi.config(staticIP, gateway, subnet, dns)) {
+    Serial.println("Static IP config failed!");
+  } else {
+    Serial.printf("Static IP set: %s\n", staticIP.toString().c_str());
+  }
+
   // Connected successfully
   tft.fillScreen(COLOR_BACKGROUND);
   tft.setTextColor(COLOR_SUCCESS);

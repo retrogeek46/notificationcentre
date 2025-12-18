@@ -14,7 +14,7 @@ static char previousTimeStr[25] = "                    ";
 void initScreen() {
   tft.init();
   tft.fillScreen(COLOR_BACKGROUND);
-  tft.setRotation(3);
+  tft.setRotation(TFT_ROTATION);
   tft.setFreeFont(&FreeMono9pt7b);
   tft.setTextSize(1);
 }

@@ -5,6 +5,9 @@
 #define LED_PIN 32
 #define LED_COUNT 1
 
+// Display rotation (0=portrait, 1=landscape, 2=portrait inverted, 3=landscape inverted)
+#define TFT_ROTATION 1
+
 // Motor driver pins (L298N Motor A) - Left side only
 #define MOTOR_ENA 33   // PWM speed control
 #define MOTOR_IN1 13   // Direction (always HIGH for forward)
