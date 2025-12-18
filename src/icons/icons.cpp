@@ -2,18 +2,9 @@
 
 // ==================== Slack Icon ====================
 void drawSlackIcon(int x, int y) {
-  static uint16_t lineBuf[ICON_WIDTH];
-  const uint8_t* p = slack_icon_map;
-
-  for (int row = 0; row < ICON_HEIGHT; row++) {
-    for (int col = 0; col < ICON_WIDTH; col++) {
-      uint8_t lo = pgm_read_byte(p++);
-      uint8_t hi = pgm_read_byte(p++);
-      uint16_t rgb565 = (lo << 8) | hi;
-      lineBuf[col] = rgb565;
-    }
-    tft.pushImage(x, y + row, ICON_WIDTH, 1, lineBuf);
-  }
+  tft.setSwapBytes(true); // Fix "washed out" or wrong colors for uint16_t arrays
+  tft.pushImage(x, y, ICON_WIDTH, ICON_HEIGHT, slack_icon);
+  tft.setSwapBytes(false); // Reset to avoid affecting other drawing
 }
 
 // ==================== App Icon Dispatcher ====================

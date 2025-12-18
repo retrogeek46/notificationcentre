@@ -72,7 +72,7 @@ void loop() {
   refreshScreen();
 
   // DEBUG: Draw zone boundaries (comment out when done)
-  drawDebugZones();
+  // drawDebugZones();
 
   // WiFi reconnect check
   checkWiFiReconnect();

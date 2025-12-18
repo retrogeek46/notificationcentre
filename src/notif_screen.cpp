@@ -4,6 +4,8 @@
 #include "screen.h"
 #include "led_control.h"
 #include "icons/icons.h"
+#include "fonts/MDIOTrial_Regular8pt7b.h"
+#include "fonts/MDIOTrial_Bold8pt7b.h"
 
 // ==================== Draw Content ====================
 void drawNotifContent() {
@@ -20,7 +22,8 @@ void drawNotifContent() {
       // Draw app icon
       drawAppIcon(4, y, notifications[i].app);
 
-      // Draw sender
+      // Draw sender (Bold)
+      tft.setFreeFont(&MDIOTrial_Bold8pt7b);
       tft.setTextColor(notifications[i].color);
       String sender = notifications[i].from;
       if (sender.length() > NOTIF_SENDER_MAX_CHARS) {
@@ -28,7 +31,8 @@ void drawNotifContent() {
       }
       tft.drawString(sender + ":", 27, y);
 
-      // Draw message (starting from screen edge for more chars)
+      // Draw message (Regular)
+      tft.setFreeFont(&MDIOTrial_Regular8pt7b);
       tft.setTextColor(COLOR_NOTIF_MSG);
       String msg = notifications[i].message;
       if (msg.length() > NOTIF_MSG_MAX_CHARS - 1) {
