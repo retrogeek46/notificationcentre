@@ -1,4 +1,13 @@
+# Media session access
 winrt-runtime
 winrt-Windows.Media.Control
 winrt-Windows.Foundation
+
+# HTTP requests
 requests
+
+# System monitoring
+psutil
+pynvml      # NVIDIA GPU stats
+wmi         # CPU temperature (Windows)
+pywin32     # Window detection

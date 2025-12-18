@@ -1,0 +1,52 @@
+# Games list for automatic gaming mode detection
+# Add game executable names or partial names (one per line)
+# Partial matching is used - "titanfall" will match "Titanfall2.exe"
+
+# Action/Adventure
+titanfall
+celeste
+yakuza
+sekiro
+hollowknight
+hollow knight
+darksouls
+dark souls
+deusex
+deus ex
+omori
+
+# Racing/Driving
+beamng
+forza
+forzahorizon
+dirtrally
+dirt rally
+eurotrucks
+ets2
+truckers
+trackmania
+tmnf
+burnout
+assetto
+acs
+
+# Simulation
+eurotrucksimulator
+
+# Visual Novels / Story Games
+steinsgate
+steins;gate
+disco elysium
+discoelysium
+
+# Indie
+bindingofisaac
+isaac
+mindustry
+clairobscur
+
+# Emulators (optional - uncomment if you want gaming mode when using emulators)
+# visualboy
+# retroarch
+# dolphin
+# pcsx2

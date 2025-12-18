@@ -17,5 +17,7 @@ void handleCompleteReminder(AsyncWebServerRequest* request);
 void handleNowPlaying(AsyncWebServerRequest* request);
 void handleScreenSwitch(AsyncWebServerRequest* request);
 void handleMotorSet(AsyncWebServerRequest* request);
+void handleGamingMode(AsyncWebServerRequest* request);
+void handlePcStats(AsyncWebServerRequest* request);
 
 #endif

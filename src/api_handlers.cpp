@@ -28,6 +28,10 @@ void setupApiRoutes() {
   // Motor control
   server.on("/motor", HTTP_POST, handleMotorSet);
 
+  // Gaming mode / PC stats
+  server.on("/gaming", HTTP_POST, handleGamingMode);
+  server.on("/pcstats", HTTP_POST, handlePcStats);
+
   // Root
   server.on("/", HTTP_GET, handleRoot);
 
@@ -173,6 +177,8 @@ void handleRoot(AsyncWebServerRequest* request) {
   html += "<p>Use <b>/screen?name=notifs|reminder</b> POST to switch</p>";
   html += "<p>Use <b>/nowplaying</b> POST with song, artist</p>";
   html += "<p>Use <b>/motor</b> POST with speed=0..255</p>";
+  html += "<p>Use <b>/gaming</b> POST with enabled=0|1</p>";
+  html += "<p>Use <b>/pcstats</b> POST with cpu_temp, cpu_usage, cpu_speed, ram_used, ram_total, gpu_temp, gpu_usage, net_speed</p>";
   request->send(200, "text/html", html);
 }
 
@@ -190,4 +196,50 @@ void handleMotorSet(AsyncWebServerRequest* request) {
 
   String resp = "{\"speed\":" + String(val) + "}";
   request->send(200, "application/json", resp);
+}
+
+// ==================== Gaming Mode Handler ====================
+void handleGamingMode(AsyncWebServerRequest* request) {
+  String enabled = request->hasParam("enabled", true) ? request->getParam("enabled", true)->value() : "";
+
+  if (enabled == "1" || enabled == "true") {
+    gamingMode = true;
+    setZoneDirty(ZONE_STATUS);
+    Serial.println("Gaming mode: ON");
+    request->send(200, "application/json", "{\"gaming\":true}");
+  } else {
+    gamingMode = false;
+    setZoneDirty(ZONE_STATUS);
+    Serial.println("Gaming mode: OFF");
+    request->send(200, "application/json", "{\"gaming\":false}");
+  }
+}
+
+// ==================== PC Stats Handler ====================
+void handlePcStats(AsyncWebServerRequest* request) {
+  // Only process if gaming mode is active
+  if (!gamingMode) {
+    request->send(200, "application/json", "{\"status\":\"ignored\",\"reason\":\"gaming mode off\"}");
+    return;
+  }
+
+  // Parse all stats from request
+  pcCpuTemp = request->hasParam("cpu_temp", true) ? request->getParam("cpu_temp", true)->value().toInt() : pcCpuTemp;
+  pcCpuUsage = request->hasParam("cpu_usage", true) ? request->getParam("cpu_usage", true)->value().toInt() : pcCpuUsage;
+  pcCpuSpeed = request->hasParam("cpu_speed", true) ? request->getParam("cpu_speed", true)->value().toFloat() : pcCpuSpeed;
+  pcRamUsed = request->hasParam("ram_used", true) ? request->getParam("ram_used", true)->value().toInt() : pcRamUsed;
+  pcRamTotal = request->hasParam("ram_total", true) ? request->getParam("ram_total", true)->value().toInt() : pcRamTotal;
+  pcGpuTemp = request->hasParam("gpu_temp", true) ? request->getParam("gpu_temp", true)->value().toInt() : pcGpuTemp;
+  pcGpuUsage = request->hasParam("gpu_usage", true) ? request->getParam("gpu_usage", true)->value().toInt() : pcGpuUsage;
+  pcNetDown = request->hasParam("net_down", true) ? request->getParam("net_down", true)->value().toFloat() : pcNetDown;
+  pcNetUp = request->hasParam("net_up", true) ? request->getParam("net_up", true)->value().toFloat() : pcNetUp;
+
+  pcStatsUpdated = millis();
+  setZoneDirty(ZONE_STATUS);
+
+  Serial.printf("PC Stats: CPU %d°/%d%%/%.1fG GPU %d°/%d%% RAM %d/%dG NET ↓%.1f ↑%.1fM\n",
+                pcCpuTemp, pcCpuUsage, pcCpuSpeed, pcGpuTemp, pcGpuUsage,
+                pcRamUsed, pcRamTotal, pcNetDown, pcNetUp);
+
+  request->send(200, "application/json", "{\"status\":\"ok\"}");
 }

@@ -92,14 +92,131 @@ void updateClock() {
     cursorX += maxCharWidth;
   }
 }
-// ==================== Status Zone (Now Playing) ====================
+// ==================== Status Zone (Now Playing / PC Stats) ====================
 // Sprites for flicker-free rendering
 static TFT_eSprite npSprite = TFT_eSprite(&tft);       // Full status zone (320x18)
 static TFT_eSprite textSprite = TFT_eSprite(&tft);     // Text-only zone (298x18)
 static bool npSpriteCreated = false;
 static bool npZoneCleared = false;  // One-time zone clear
 
+// Color definitions for PC stats
+#define COLOR_CPU    0xFD20   // Orange
+#define COLOR_GPU    0xF81F   // Magenta
+#define COLOR_RAM    TFT_YELLOW
+#define COLOR_NET    TFT_GREEN
+#define COLOR_SEP    0x4208   // Dark gray for separators
+
+void drawPcStats() {
+  const int zoneY = 19;
+  const int zoneH = 18;
+
+  // One-time zone clear
+  if (!npZoneCleared) {
+    tft.fillRect(0, zoneY, 320, zoneH, COLOR_BACKGROUND);
+    npZoneCleared = true;
+  }
+
+  // Create sprite if needed
+  if (!npSpriteCreated) {
+    npSprite.createSprite(320, zoneH);
+    npSprite.setFreeFont(&FreeMono9pt7b);
+    textSprite.createSprite(320 - 22, zoneH);
+    textSprite.setFreeFont(&FreeMono9pt7b);
+    npSpriteCreated = true;
+  }
+
+  // Clear sprite
+  npSprite.fillSprite(COLOR_BACKGROUND);
+  npSprite.setTextSize(1);
+
+  int x = 2;
+  int y = 3;
+
+  // Compact format: "65 45% 4.2|72 95%|8G|↓12↑2"
+  // CPU stats in orange
+  npSprite.setTextColor(COLOR_CPU);
+  char cpuStr[16];
+  if (pcCpuTemp > 0) {
+    snprintf(cpuStr, sizeof(cpuStr), "%d %d%% %.1f", pcCpuTemp, pcCpuUsage, pcCpuSpeed);
+  } else {
+    snprintf(cpuStr, sizeof(cpuStr), "%d%% %.1f", pcCpuUsage, pcCpuSpeed);
+  }
+  npSprite.drawString(cpuStr, x, y);
+  x += npSprite.textWidth(cpuStr);
+
+  // Separator
+  npSprite.setTextColor(COLOR_SEP);
+  npSprite.drawString("|", x, y);
+  x += npSprite.textWidth("|");
+
+  // GPU stats in magenta
+  npSprite.setTextColor(COLOR_GPU);
+  char gpuStr[12];
+  snprintf(gpuStr, sizeof(gpuStr), "%d %d%%", pcGpuTemp, pcGpuUsage);
+  npSprite.drawString(gpuStr, x, y);
+  x += npSprite.textWidth(gpuStr);
+
+  // Separator
+  npSprite.setTextColor(COLOR_SEP);
+  npSprite.drawString("|", x, y);
+  x += npSprite.textWidth("|");
+
+  // RAM in yellow
+  npSprite.setTextColor(COLOR_RAM);
+  char ramStr[6];
+  snprintf(ramStr, sizeof(ramStr), "%dG", pcRamUsed);
+  npSprite.drawString(ramStr, x, y);
+  x += npSprite.textWidth(ramStr);
+
+  // Separator
+  npSprite.setTextColor(COLOR_SEP);
+  npSprite.drawString("|", x, y);
+  x += npSprite.textWidth("|");
+
+  // Network: down arrow + down speed, up arrow + up speed (all in green)
+  npSprite.setTextColor(COLOR_NET);
+
+  // Down arrow
+  int arrowX = x + 3;
+  int arrowY = y + 5;
+  npSprite.fillTriangle(arrowX, arrowY + 4, arrowX - 3, arrowY - 2, arrowX + 3, arrowY - 2, COLOR_NET);
+  x += 8;
+
+  // Down speed
+  char downStr[6];
+  if (pcNetDown >= 10) {
+    snprintf(downStr, sizeof(downStr), "%.0f", pcNetDown);
+  } else {
+    snprintf(downStr, sizeof(downStr), "%.1f", pcNetDown);
+  }
+  npSprite.drawString(downStr, x, y);
+  x += npSprite.textWidth(downStr) + 2;
+
+  // Up arrow
+  arrowX = x + 3;
+  npSprite.fillTriangle(arrowX, arrowY - 4, arrowX - 3, arrowY + 2, arrowX + 3, arrowY + 2, COLOR_NET);
+  x += 8;
+
+  // Up speed
+  char upStr[6];
+  if (pcNetUp >= 10) {
+    snprintf(upStr, sizeof(upStr), "%.0f", pcNetUp);
+  } else {
+    snprintf(upStr, sizeof(upStr), "%.1f", pcNetUp);
+  }
+  npSprite.drawString(upStr, x, y);
+
+  // Push to screen
+  npSprite.pushSprite(0, zoneY);
+}
+
 void drawNowPlaying() {
+  // If gaming mode is active, show PC stats instead
+  if (gamingMode) {
+    drawPcStats();
+    return;
+  }
+
   const int zoneY = 19;
   const int zoneH = 18;
   const int textZoneX = NOW_PLAYING_TEXT_X;  // 22
