@@ -18,7 +18,7 @@ void drawNotifContent() {
 
     if (notifications[i].message != "") {
       // Draw app icon
-      drawAppIcon(5, y, notifications[i].app);
+      drawAppIcon(4, y, notifications[i].app);
 
       // Draw sender
       tft.setTextColor(notifications[i].color);

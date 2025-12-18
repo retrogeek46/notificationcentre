@@ -31,8 +31,8 @@
 #define ENCODER_MIN_SPEED  50    // Minimum motor speed
 
 // ===== Icon Dimensions =====
-#define ICON_HEIGHT 16
-#define ICON_WIDTH 16
+#define ICON_HEIGHT 14
+#define ICON_WIDTH 14
 #define REMINDER_ICON_RADIUS 5
 
 // ===== Display Limits =====
@@ -41,9 +41,9 @@
 
 // ===== Text Truncation Limits =====
 #define NOTIF_SENDER_MAX_CHARS 24
-#define NOTIF_MSG_MAX_CHARS 56
-#define NOTIF_MSG_LINE_CHARS 28
-#define REMINDER_MSG_MAX_CHARS 28
+#define NOTIF_MSG_MAX_CHARS 68
+#define NOTIF_MSG_LINE_CHARS 35
+#define REMINDER_MSG_MAX_CHARS 35
 
 // ===== Timing (milliseconds) =====
 #define CLOCK_UPDATE_INTERVAL 1000
