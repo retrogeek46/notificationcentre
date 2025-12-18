@@ -19,6 +19,10 @@ void initScreen() {
   tft.setRotation(TFT_ROTATION);
   tft.setFreeFont(&MDIOTrial_Regular8pt7b);
   tft.setTextSize(1);
+
+#if DEBUG_SHOW_ZONES
+  drawDebugZones();
+#endif
 }
 
 // ==================== Debug: Zone Boundaries ====================
@@ -94,6 +98,17 @@ void clearZone(Zone zone) {
   }
 
   tft.fillRect(x_start, y_start, x_end - x_start + 1, y_end - y_start + 1, COLOR_BACKGROUND);
+
+#if DEBUG_SHOW_ZONES
+  tft.drawRect(x_start, y_start, x_end - x_start + 1, y_end - y_start + 1, TFT_WHITE);
+
+  // Draw internal slot lines if clearing content zone
+  if (zone == ZONE_CONTENT) {
+    // Slot separators at 109 and 174
+    tft.drawFastHLine(x_start, ZONE_NOTIF1_Y_END, x_end - x_start + 1, TFT_WHITE);
+    tft.drawFastHLine(x_start, ZONE_NOTIF2_Y_END, x_end - x_start + 1, TFT_WHITE);
+  }
+#endif
 }
 
 // ==================== Title Zone ====================
@@ -260,6 +275,10 @@ void drawPcStats() {
   }
   npSprite.drawString(upStr, x, y);
 
+#if DEBUG_SHOW_ZONES
+  npSprite.drawRect(0, 0, zoneW, zoneH, TFT_WHITE);
+#endif
+
   // Push to screen at status zone position
   npSprite.pushSprite(ZONE_STATUS_X_START, ZONE_STATUS_Y_START);
 }
@@ -356,6 +375,10 @@ void drawNowPlaying() {
     textSprite.pushToSprite(&npSprite, textZoneX, 0);
   }
 
+#if DEBUG_SHOW_ZONES
+  npSprite.drawRect(0, 0, zoneW, zoneH, TFT_WHITE);
+#endif
+
   // Push to screen atomically at status zone position
   npSprite.pushSprite(zoneX, zoneY);
 }
@@ -400,7 +423,12 @@ void refreshScreen() {
     clearZoneDirty(ZONE_TITLE);
   }
 
-  // Clock is handled separately by updateClock() for partial updates
+  // Clock zone
+  if (isZoneDirty(ZONE_CLOCK)) {
+    clearZone(ZONE_CLOCK);
+    resetPreviousTimeStr();  // Force updateClock to redraw all characters
+    clearZoneDirty(ZONE_CLOCK);
+  }
 
   // Status zone (Now Playing) - no clearZone, drawNowPlaying handles its own updates
   if (isZoneDirty(ZONE_STATUS)) {

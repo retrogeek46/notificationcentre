@@ -1,0 +1,20 @@
+meta {
+  name: Change Screen to Reminder
+  type: http
+  seq: 4
+}
+
+post {
+  url: http://{{notif_url}}/screen?name=reminder
+  body: none
+  auth: inherit
+}
+
+params:query {
+  name: reminder
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -5,6 +5,8 @@
 #include "led_control.h"
 #include "storage.h"
 #include <time.h>
+#include "fonts/MDIOTrial_Regular8pt7b.h"
+#include "fonts/MDIOTrial_Bold8pt7b.h"
 
 // ==================== Draw Content ====================
 void drawReminderContent() {
@@ -42,20 +44,22 @@ void drawReminderContent() {
     }
   }
 
-  // Display up to 5 reminders
-  int y = ZONE_CONTENT_Y_START + 1;
+  // Display up to 3 reminders (matching 65px slots)
+  const int slotYStarts[] = {ZONE_NOTIF1_Y_START, ZONE_NOTIF2_Y_START, ZONE_NOTIF3_Y_START};
   int shown = 0;
   time_t now = time(nullptr);
 
-  for (int s = 0; s < count && shown < 5; s++) {
+  for (int s = 0; s < count && shown < 3; s++) {
+    int y = slotYStarts[shown] + 5; // Match notif_screen padding
     Reminder& rm = reminders[listIdx[s]];
 
-    // Icon
+    // Icon (Centered at X=11 to match 14x14 icon alignment)
     uint16_t iconColor = rm.triggered ? COLOR_REMINDER_ICON_ACTIVE : COLOR_REMINDER_ICON_INACTIVE;
-    tft.fillCircle(10, y + 6, REMINDER_ICON_RADIUS, iconColor);
-    tft.drawCircle(10, y + 6, REMINDER_ICON_RADIUS, COLOR_ICON_BORDER);
+    tft.fillCircle(11, y + 7, REMINDER_ICON_RADIUS, iconColor);
+    tft.drawCircle(11, y + 7, REMINDER_ICON_RADIUS, COLOR_ICON_BORDER);
 
-    // Line 1: [id] + due time
+    // Line 1: [id] + due time (Bold, starts at X=27)
+    tft.setFreeFont(&MDIOTrial_Bold8pt7b);
     tft.setTextColor(COLOR_REMINDER_DUE);
     time_t effTime = listTime[s];
     char buf[32];
@@ -75,18 +79,29 @@ void drawReminderContent() {
     }
 
     String line1 = "[" + String(rm.id) + "] " + String(buf);
-    tft.drawString(line1, 20, y);
+    tft.drawString(line1, 27, y);
 
-    // Line 2: message
+    // Message (Starting from X=5 for more space, match notif_screen logic)
+    tft.setFreeFont(&MDIOTrial_Regular8pt7b);
     tft.setTextColor(rm.triggered ? COLOR_REMINDER_ACTIVE : COLOR_REMINDER_INACTIVE);
     String msg = rm.message;
-    if (msg.length() > REMINDER_MSG_MAX_CHARS) {
-      msg = msg.substring(0, REMINDER_MSG_MAX_CHARS) + "...";
+    if (msg.length() > REMINDER_MSG_MAX_CHARS - 1) {
+      msg = msg.substring(0, REMINDER_MSG_MAX_CHARS - 1) + "...";
     }
-    tft.drawString(msg, 5, y + 18);
+
+    // Line 1
+    String msgLine1 = msg.substring(0, min(NOTIF_MSG_LINE_CHARS, (int)msg.length()));
+    msgLine1.trim();
+    tft.drawString(msgLine1, 5, y + 20);
+
+    // Line 2
+    if (msg.length() > NOTIF_MSG_LINE_CHARS) {
+      String msgLine2 = msg.substring(NOTIF_MSG_LINE_CHARS);
+      msgLine2.trim();
+      tft.drawString(msgLine2, 5, y + 40);
+    }
 
     shown++;
-    y += 40;
   }
 }
 

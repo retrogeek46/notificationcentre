@@ -1,18 +1,17 @@
 meta {
-  name: Update Now Playing
+  name: Complete Reminder
   type: http
-  seq: 7
+  seq: 10
 }
 
 post {
-  url: http://{{notif_url}}/nowplaying
+  url: http://{{notif_url}}/completeReminder
   body: formUrlEncoded
   auth: inherit
 }
 
 body:form-urlencoded {
-  song: Panorama
-  artist: DROLOE
+  id: 1
 }
 
 settings {

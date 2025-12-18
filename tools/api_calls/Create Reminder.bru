@@ -1,0 +1,23 @@
+meta {
+  name: Create Reminder
+  type: http
+  seq: 9
+}
+
+post {
+  url: http://{{notif_url}}/addreminder
+  body: formUrlEncoded
+  auth: inherit
+}
+
+body:form-urlencoded {
+  message: something that is long enough to need truncation for testing this right now
+  time: 2025-12-19 02:04
+  limit: 60
+  priority: high
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

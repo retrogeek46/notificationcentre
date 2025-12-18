@@ -8,6 +8,9 @@
 // Display rotation (0=portrait, 1=landscape, 2=portrait inverted, 3=landscape inverted)
 #define TFT_ROTATION 3
 
+// Debugging
+#define DEBUG_SHOW_ZONES 1
+
 // Motor driver pins (L298N Motor A) - Left side only
 #define MOTOR_ENA 33   // PWM speed control
 #define MOTOR_IN1 13   // Direction (always HIGH for forward)
@@ -33,7 +36,7 @@
 // ===== Icon Dimensions =====
 #define ICON_HEIGHT 14
 #define ICON_WIDTH 14
-#define REMINDER_ICON_RADIUS 5
+#define REMINDER_ICON_RADIUS 7
 
 // ===== Display Limits =====
 #define MAX_NOTIFICATIONS 5
@@ -43,7 +46,7 @@
 #define NOTIF_SENDER_MAX_CHARS 24
 #define NOTIF_MSG_MAX_CHARS 68
 #define NOTIF_MSG_LINE_CHARS 35
-#define REMINDER_MSG_MAX_CHARS 35
+#define REMINDER_MSG_MAX_CHARS 68
 
 // ===== Timing (milliseconds) =====
 #define CLOCK_UPDATE_INTERVAL 1000
