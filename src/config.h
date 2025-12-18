@@ -62,6 +62,7 @@
 #define NOW_PLAYING_TEXT_WIDTH 298     // Available width for text (320 - 22)
 
 // ===== PC Stats Configuration =====
+#define PC_STATS_TIMEOUT 3000          // ms - show idle if no stats for this long
 #define CPU_TEMP_WARN 80               // Flash red if CPU temp exceeds this
 #define GPU_TEMP_WARN 75               // Flash red if GPU temp exceeds this
 

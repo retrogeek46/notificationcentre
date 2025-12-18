@@ -290,14 +290,20 @@ void drawPcStats() {
 }
 
 void drawNowPlaying() {
-  // Priority: Game → Stats, Music → Media, Idle → Stats
-  // 1. If gaming mode is active, show PC stats
-  // 2. If music is playing, show Now Playing
-  // 3. If idle (no game, no music), show PC stats instead of idle disc
-  if (gamingMode || !nowPlayingActive) {
+  // Check if PC stats are stale (PC went to sleep)
+  bool pcStatsStale = (millis() - pcStatsUpdated) > PC_STATS_TIMEOUT;
+
+  // Priority: Music → Media, Active Stats → Stats, Stale/Idle → Idle Disc
+  // 1. If music is playing, show Now Playing
+  // 2. If PC stats are fresh, show stats
+  // 3. If no music and stats are stale, show idle spinning disc
+  if (nowPlayingActive) {
+    // Continue to draw now playing below
+  } else if (!pcStatsStale) {
     drawPcStats();
     return;
   }
+  // If we get here with stale stats and no music, show idle disc
 
   const int zoneX = ZONE_STATUS_X_START;
   const int zoneY = ZONE_STATUS_Y_START;
