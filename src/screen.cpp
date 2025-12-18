@@ -4,6 +4,8 @@
 #include "notif_screen.h"
 #include "reminder_screen.h"
 #include "icons/icons.h"
+#include "fonts/MDIOTrial_Regular8pt7b.h"
+#include "fonts/MDIOTrial_Bold8pt7b.h"
 #include <time.h>
 
 TFT_eSPI tft = TFT_eSPI();
@@ -15,33 +17,36 @@ void initScreen() {
   tft.init();
   tft.fillScreen(COLOR_BACKGROUND);
   tft.setRotation(TFT_ROTATION);
-  tft.setFreeFont(&FreeMono9pt7b);
+  tft.setFreeFont(&MDIOTrial_Regular8pt7b);
   tft.setTextSize(1);
 }
 
 // ==================== Zone Helpers ====================
 void clearZone(Zone zone) {
-  int y_start, y_end;
-  int x_start = 0;
-  int width = 320;
+  int x_start, x_end, y_start, y_end;
 
   switch (zone) {
     case ZONE_TITLE:
+      x_start = ZONE_TITLE_X_START;
+      x_end = ZONE_TITLE_X_END;
       y_start = ZONE_TITLE_Y_START;
       y_end = ZONE_TITLE_Y_END;
-      width = 95;  // Left portion for title
       break;
     case ZONE_CLOCK:
+      x_start = ZONE_CLOCK_X_START;
+      x_end = ZONE_CLOCK_X_END;
       y_start = ZONE_CLOCK_Y_START;
       y_end = ZONE_CLOCK_Y_END;
-      x_start = 100;  // Right portion for clock
-      width = 220;
       break;
     case ZONE_STATUS:
+      x_start = ZONE_STATUS_X_START;
+      x_end = ZONE_STATUS_X_END;
       y_start = ZONE_STATUS_Y_START;
       y_end = ZONE_STATUS_Y_END;
       break;
     case ZONE_CONTENT:
+      x_start = ZONE_CONTENT_X_START;
+      x_end = ZONE_CONTENT_X_END;
       y_start = ZONE_CONTENT_Y_START;
       y_end = ZONE_CONTENT_Y_END;
       break;
@@ -49,16 +54,20 @@ void clearZone(Zone zone) {
       return;
   }
 
-  tft.fillRect(x_start, y_start, width, y_end - y_start + 1, COLOR_BACKGROUND);
+  tft.fillRect(x_start, y_start, x_end - x_start + 1, y_end - y_start + 1, COLOR_BACKGROUND);
 }
 
 // ==================== Title Zone ====================
 void drawTitle() {
   tft.setTextSize(1);
+  tft.setFreeFont(&MDIOTrial_Bold8pt7b);  // Bold font for header
   tft.setTextColor(COLOR_HEADER);
 
   const char* title = (currentScreen == SCREEN_NOTIFS) ? "NOTIFS" : "REMINDER";
-  tft.drawString(title, 5, 5);
+  // Draw title within title zone (2-120 x 2-24)
+  tft.drawString(title, ZONE_TITLE_X_START + 3, ZONE_TITLE_Y_START + 3);
+  
+  tft.setFreeFont(&MDIOTrial_Regular8pt7b);  // Reset to regular font
 }
 
 // ==================== Clock Zone ====================
@@ -76,7 +85,9 @@ void updateClock() {
   tft.setTextSize(1);
   tft.setTextColor(COLOR_CLOCK);
 
-  int x = 100, y = 5;
+  // Clock zone: 121-318 x 2-24 (moved 2 chars right)
+  int x = ZONE_CLOCK_X_START + 20;
+  int y = ZONE_CLOCK_Y_START + 3;
   int charHeight = tft.fontHeight();
   int maxCharWidth = tft.textWidth("W");
   int cursorX = x;
@@ -93,9 +104,11 @@ void updateClock() {
   }
 }
 // ==================== Status Zone (Now Playing / PC Stats) ====================
-// Sprites for flicker-free rendering
-static TFT_eSprite npSprite = TFT_eSprite(&tft);       // Full status zone (320x18)
-static TFT_eSprite textSprite = TFT_eSprite(&tft);     // Text-only zone (298x18)
+// Sprites for flicker-free rendering - dimensions calculated from zone boundaries
+static const int STATUS_ZONE_W = ZONE_STATUS_X_END - ZONE_STATUS_X_START + 1;  // 317
+static const int STATUS_ZONE_H = ZONE_STATUS_Y_END - ZONE_STATUS_Y_START + 1;  // 20
+static TFT_eSprite npSprite = TFT_eSprite(&tft);       // Full status zone
+static TFT_eSprite textSprite = TFT_eSprite(&tft);     // Text-only zone
 static bool npSpriteCreated = false;
 static bool npZoneCleared = false;  // One-time zone clear
 
@@ -107,21 +120,23 @@ static bool npZoneCleared = false;  // One-time zone clear
 #define COLOR_SEP    0x4208   // Dark gray for separators
 
 void drawPcStats() {
-  const int zoneY = 19;
-  const int zoneH = 18;
+  const int zoneX = ZONE_STATUS_X_START;
+  const int zoneY = ZONE_STATUS_Y_START;
+  const int zoneW = STATUS_ZONE_W;
+  const int zoneH = STATUS_ZONE_H;
 
   // One-time zone clear
   if (!npZoneCleared) {
-    tft.fillRect(0, zoneY, 320, zoneH, COLOR_BACKGROUND);
+    tft.fillRect(zoneX, zoneY, zoneW, zoneH, COLOR_BACKGROUND);
     npZoneCleared = true;
   }
 
   // Create sprite if needed
   if (!npSpriteCreated) {
-    npSprite.createSprite(320, zoneH);
-    npSprite.setFreeFont(&FreeMono9pt7b);
-    textSprite.createSprite(320 - 22, zoneH);
-    textSprite.setFreeFont(&FreeMono9pt7b);
+    npSprite.createSprite(zoneW, zoneH);
+    npSprite.setFreeFont(&MDIOTrial_Regular8pt7b);
+    textSprite.createSprite(zoneW - 22, zoneH);  // Text area after disc icon
+    textSprite.setFreeFont(&MDIOTrial_Regular8pt7b);
     npSpriteCreated = true;
   }
 
@@ -206,8 +221,8 @@ void drawPcStats() {
   }
   npSprite.drawString(upStr, x, y);
 
-  // Push to screen
-  npSprite.pushSprite(0, zoneY);
+  // Push to screen at status zone position
+  npSprite.pushSprite(ZONE_STATUS_X_START, ZONE_STATUS_Y_START);
 }
 
 void drawNowPlaying() {
@@ -217,23 +232,25 @@ void drawNowPlaying() {
     return;
   }
 
-  const int zoneY = 19;
-  const int zoneH = 18;
-  const int textZoneX = NOW_PLAYING_TEXT_X;  // 22
-  const int textZoneW = 320 - textZoneX;     // 298
+  const int zoneX = ZONE_STATUS_X_START;
+  const int zoneY = ZONE_STATUS_Y_START;
+  const int zoneW = STATUS_ZONE_W;
+  const int zoneH = STATUS_ZONE_H;
+  const int textZoneX = NOW_PLAYING_TEXT_X;  // 22 (after disc icon)
+  const int textZoneW = zoneW - textZoneX;   // Remaining width for text
 
   // One-time zone clear to remove setup messages (WiFi OK, etc)
   if (!npZoneCleared) {
-    tft.fillRect(0, zoneY, 320, zoneH, COLOR_BACKGROUND);
+    tft.fillRect(zoneX, zoneY, zoneW, zoneH, COLOR_BACKGROUND);
     npZoneCleared = true;
   }
 
   // Create sprites once
   if (!npSpriteCreated) {
-    npSprite.createSprite(320, zoneH);
-    npSprite.setFreeFont(&FreeMono9pt7b);
+    npSprite.createSprite(zoneW, zoneH);
+    npSprite.setFreeFont(&MDIOTrial_Regular8pt7b);
     textSprite.createSprite(textZoneW, zoneH);
-    textSprite.setFreeFont(&FreeMono9pt7b);
+    textSprite.setFreeFont(&MDIOTrial_Regular8pt7b);
     npSpriteCreated = true;
   }
 
@@ -241,8 +258,9 @@ void drawNowPlaying() {
   npSprite.fillSprite(COLOR_BACKGROUND);
 
   // Draw disc icon to sprite - always spinning, color depends on state
-  int cx = 11;  // 3 + 8
-  int cy = 9;   // 1 + 8
+  // Center disc in left portion of sprite (roughly 11px from left, centered vertically)
+  int cx = 11;
+  int cy = zoneH / 2;  // Center vertically in zone
   uint16_t discColor = nowPlayingActive ? TFT_WHITE : 0x2104;  // Very dark gray when idle
 
   npSprite.drawCircle(cx, cy, 7, discColor);
@@ -299,8 +317,8 @@ void drawNowPlaying() {
     textSprite.pushToSprite(&npSprite, textZoneX, 0);
   }
 
-  // Push to screen atomically
-  npSprite.pushSprite(0, zoneY);
+  // Push to screen atomically at status zone position
+  npSprite.pushSprite(zoneX, zoneY);
 }
 
 // ==================== Now Playing Ticker Update ====================
