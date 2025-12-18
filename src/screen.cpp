@@ -201,77 +201,83 @@ void drawPcStats() {
   int x = 2;
   int y = 3;
 
-  // Compact format: "65 45% 4.2|72 95%|8G|↓12↑2"
+  // Compact format: "65c 45% 4.2GHz | 72c 95% | 8G | ↓12↑2"
   // CPU stats in orange
   npSprite.setTextColor(COLOR_CPU);
-  char cpuStr[16];
+  char cpuStr[20];
   if (pcCpuTemp > 0) {
-    snprintf(cpuStr, sizeof(cpuStr), "%d %d%% %.1f", pcCpuTemp, pcCpuUsage, pcCpuSpeed);
+    snprintf(cpuStr, sizeof(cpuStr), "%dc %d%% %.1fGHz", pcCpuTemp, pcCpuUsage, pcCpuSpeed);
   } else {
-    snprintf(cpuStr, sizeof(cpuStr), "%d%% %.1f", pcCpuUsage, pcCpuSpeed);
+    snprintf(cpuStr, sizeof(cpuStr), "%d%% %.1fGHz", pcCpuUsage, pcCpuSpeed);
   }
   npSprite.drawString(cpuStr, x, y);
   x += npSprite.textWidth(cpuStr);
 
-  // Separator
+  // Separator (no space after GHz)
   npSprite.setTextColor(COLOR_SEP);
-  npSprite.drawString("|", x, y);
-  x += npSprite.textWidth("|");
+  npSprite.drawString("| ", x, y);
+  x += npSprite.textWidth("| ");
 
   // GPU stats in magenta
   npSprite.setTextColor(COLOR_GPU);
   char gpuStr[12];
-  snprintf(gpuStr, sizeof(gpuStr), "%d %d%%", pcGpuTemp, pcGpuUsage);
+  snprintf(gpuStr, sizeof(gpuStr), "%dc %d%%", pcGpuTemp, pcGpuUsage);
   npSprite.drawString(gpuStr, x, y);
   x += npSprite.textWidth(gpuStr);
 
-  // Separator
+  // Separator (no space around RAM)
+  npSprite.setTextColor(COLOR_SEP);
+  npSprite.drawString("| ", x, y);
+  x += npSprite.textWidth("| ");
+
+  // RAM as pie chart
+  int ramCx = x + 7;
+  int ramCy = zoneH / 2;
+  int ramRadius = 6;
+  float ramPercent = (pcRamTotal > 0) ? (float)pcRamUsed / pcRamTotal : 0;
+  int ramAngle = (int)(ramPercent * 360);
+
+  // Draw empty circle
+  npSprite.drawCircle(ramCx, ramCy, ramRadius, COLOR_RAM);
+  // Fill pie segment (0 degrees = top, clockwise)
+  if (ramAngle > 0) {
+    for (int a = -90; a < -90 + ramAngle; a++) {
+      float rad = a * PI / 180.0;
+      int px = ramCx + (int)(ramRadius * cos(rad));
+      int py = ramCy + (int)(ramRadius * sin(rad));
+      npSprite.drawLine(ramCx, ramCy, px, py, COLOR_RAM);
+    }
+  }
+  x += 16;  // Pie chart width
+
+  // Separator (no space around RAM)
   npSprite.setTextColor(COLOR_SEP);
   npSprite.drawString("|", x, y);
   x += npSprite.textWidth("|");
 
-  // RAM in yellow
-  npSprite.setTextColor(COLOR_RAM);
-  char ramStr[6];
-  snprintf(ramStr, sizeof(ramStr), "%dG", pcRamUsed);
-  npSprite.drawString(ramStr, x, y);
-  x += npSprite.textWidth(ramStr);
-
-  // Separator
-  npSprite.setTextColor(COLOR_SEP);
-  npSprite.drawString("|", x, y);
-  x += npSprite.textWidth("|");
-
-  // Network: down arrow + down speed, up arrow + up speed (all in green)
+  // Network: Download (green), Upload (cyan) - no arrows
+  // Download speed in green
   npSprite.setTextColor(COLOR_NET);
-
-  // Down arrow
-  int arrowX = x + 3;
-  int arrowY = y + 5;
-  npSprite.fillTriangle(arrowX, arrowY + 4, arrowX - 3, arrowY - 2, arrowX + 3, arrowY - 2, COLOR_NET);
-  x += 8;
-
-  // Down speed
-  char downStr[6];
-  if (pcNetDown >= 10) {
-    snprintf(downStr, sizeof(downStr), "%.0f", pcNetDown);
+  char downStr[8];
+  if (pcNetDown >= 100) {
+    snprintf(downStr, sizeof(downStr), "%.0fM", pcNetDown);
+  } else if (pcNetDown >= 10) {
+    snprintf(downStr, sizeof(downStr), "%.0fM", pcNetDown);
   } else {
-    snprintf(downStr, sizeof(downStr), "%.1f", pcNetDown);
+    snprintf(downStr, sizeof(downStr), "%.1fM", pcNetDown);
   }
   npSprite.drawString(downStr, x, y);
   x += npSprite.textWidth(downStr) + 2;
 
-  // Up arrow
-  arrowX = x + 3;
-  npSprite.fillTriangle(arrowX, arrowY - 4, arrowX - 3, arrowY + 2, arrowX + 3, arrowY + 2, COLOR_NET);
-  x += 8;
-
-  // Up speed
-  char upStr[6];
-  if (pcNetUp >= 10) {
-    snprintf(upStr, sizeof(upStr), "%.0f", pcNetUp);
+  // Upload speed in cyan
+  npSprite.setTextColor(TFT_CYAN);
+  char upStr[8];
+  if (pcNetUp >= 100) {
+    snprintf(upStr, sizeof(upStr), "%.0fM", pcNetUp);
+  } else if (pcNetUp >= 10) {
+    snprintf(upStr, sizeof(upStr), "%.0fM", pcNetUp);
   } else {
-    snprintf(upStr, sizeof(upStr), "%.1f", pcNetUp);
+    snprintf(upStr, sizeof(upStr), "%.1fM", pcNetUp);
   }
   npSprite.drawString(upStr, x, y);
 
@@ -284,8 +290,11 @@ void drawPcStats() {
 }
 
 void drawNowPlaying() {
-  // If gaming mode is active, show PC stats instead
-  if (gamingMode) {
+  // Priority: Game → Stats, Music → Media, Idle → Stats
+  // 1. If gaming mode is active, show PC stats
+  // 2. If music is playing, show Now Playing
+  // 3. If idle (no game, no music), show PC stats instead of idle disc
+  if (gamingMode || !nowPlayingActive) {
     drawPcStats();
     return;
   }

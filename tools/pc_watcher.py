@@ -529,12 +529,18 @@ class PCWatcher:
                     self.last_playing = False
 
             if self.gaming_mode:
-                # GAMING MODE: Send PC stats at slower interval
+                # GAMING MODE: Send PC stats at slower interval (media is ignored)
                 if current_time - self.last_stats_update >= STATS_INTERVAL:
                     self.send_stats()
                     self.last_stats_update = current_time
             else:
-                # NORMAL MODE: Watch media
+                # NORMAL MODE: Watch media AND send stats
+                # Always send stats so ESP32 can show them when idle
+                if current_time - self.last_stats_update >= STATS_INTERVAL:
+                    self.send_stats()
+                    self.last_stats_update = current_time
+
+                # Also watch media
                 song, artist, is_playing = await self.get_media_info()
 
                 # Determine if we need to send an update

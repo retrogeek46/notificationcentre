@@ -217,11 +217,7 @@ void handleGamingMode(AsyncWebServerRequest* request) {
 
 // ==================== PC Stats Handler ====================
 void handlePcStats(AsyncWebServerRequest* request) {
-  // Only process if gaming mode is active
-  if (!gamingMode) {
-    request->send(200, "application/json", "{\"status\":\"ignored\",\"reason\":\"gaming mode off\"}");
-    return;
-  }
+  // Always accept stats (display logic decides what to show)
 
   // Parse all stats from request
   pcCpuTemp = request->hasParam("cpu_temp", true) ? request->getParam("cpu_temp", true)->value().toInt() : pcCpuTemp;

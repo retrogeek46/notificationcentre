@@ -61,6 +61,10 @@
 #define NOW_PLAYING_TEXT_X 22          // Text start X (after disc icon)
 #define NOW_PLAYING_TEXT_WIDTH 298     // Available width for text (320 - 22)
 
+// ===== PC Stats Configuration =====
+#define CPU_TEMP_WARN 80               // Flash red if CPU temp exceeds this
+#define GPU_TEMP_WARN 75               // Flash red if GPU temp exceeds this
+
 // ===== NTP Configuration =====
 #define NTP_TIMEZONE_OFFSET (5.5 * 3600)  // IST +5:30
 
