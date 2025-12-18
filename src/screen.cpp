@@ -21,6 +21,45 @@ void initScreen() {
   tft.setTextSize(1);
 }
 
+// ==================== Debug: Zone Boundaries ====================
+void drawDebugZones() {
+  uint16_t debugColor = TFT_WHITE;
+
+  // Title zone border
+  tft.drawRect(ZONE_TITLE_X_START, ZONE_TITLE_Y_START,
+               ZONE_TITLE_X_END - ZONE_TITLE_X_START + 1,
+               ZONE_TITLE_Y_END - ZONE_TITLE_Y_START + 1, debugColor);
+
+  // Clock zone border
+  tft.drawRect(ZONE_CLOCK_X_START, ZONE_CLOCK_Y_START,
+               ZONE_CLOCK_X_END - ZONE_CLOCK_X_START + 1,
+               ZONE_CLOCK_Y_END - ZONE_CLOCK_Y_START + 1, debugColor);
+
+  // Status zone border
+  tft.drawRect(ZONE_STATUS_X_START, ZONE_STATUS_Y_START,
+               ZONE_STATUS_X_END - ZONE_STATUS_X_START + 1,
+               ZONE_STATUS_Y_END - ZONE_STATUS_Y_START + 1, debugColor);
+
+  // Content zone border
+  tft.drawRect(ZONE_CONTENT_X_START, ZONE_CONTENT_Y_START,
+               ZONE_CONTENT_X_END - ZONE_CONTENT_X_START + 1,
+               ZONE_CONTENT_Y_END - ZONE_CONTENT_Y_START + 1, debugColor);
+
+  // Notification content slots (3 slots of 65px each)
+  // Slot 1: Y 45-109
+  tft.drawRect(ZONE_CONTENT_X_START, ZONE_NOTIF1_Y_START,
+               ZONE_CONTENT_X_END - ZONE_CONTENT_X_START + 1,
+               ZONE_NOTIF1_Y_END - ZONE_NOTIF1_Y_START + 1, debugColor);
+  // Slot 2: Y 110-174
+  tft.drawRect(ZONE_CONTENT_X_START, ZONE_NOTIF2_Y_START,
+               ZONE_CONTENT_X_END - ZONE_CONTENT_X_START + 1,
+               ZONE_NOTIF2_Y_END - ZONE_NOTIF2_Y_START + 1, debugColor);
+  // Slot 3: Y 175-239
+  tft.drawRect(ZONE_CONTENT_X_START, ZONE_NOTIF3_Y_START,
+               ZONE_CONTENT_X_END - ZONE_CONTENT_X_START + 1,
+               ZONE_NOTIF3_Y_END - ZONE_NOTIF3_Y_START + 1, debugColor);
+}
+
 // ==================== Zone Helpers ====================
 void clearZone(Zone zone) {
   int x_start, x_end, y_start, y_end;
@@ -65,8 +104,8 @@ void drawTitle() {
 
   const char* title = (currentScreen == SCREEN_NOTIFS) ? "NOTIFS" : "REMINDER";
   // Draw title within title zone (2-120 x 2-24)
-  tft.drawString(title, ZONE_TITLE_X_START + 3, ZONE_TITLE_Y_START + 3);
-  
+  tft.drawString(title, ZONE_TITLE_X_START + 5, ZONE_TITLE_Y_START + 5);
+
   tft.setFreeFont(&MDIOTrial_Regular8pt7b);  // Reset to regular font
 }
 
@@ -85,9 +124,9 @@ void updateClock() {
   tft.setTextSize(1);
   tft.setTextColor(COLOR_CLOCK);
 
-  // Clock zone: 121-318 x 2-24 (moved 2 chars right)
-  int x = ZONE_CLOCK_X_START + 20;
-  int y = ZONE_CLOCK_Y_START + 3;
+  // Clock zone: 141-319 x 0-24 (text position unchanged)
+  int x = ZONE_CLOCK_X_START + 7;
+  int y = ZONE_CLOCK_Y_START + 5;
   int charHeight = tft.fontHeight();
   int maxCharWidth = tft.textWidth("W");
   int cursorX = x;

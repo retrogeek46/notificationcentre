@@ -7,6 +7,7 @@
 extern TFT_eSPI tft;
 
 void initScreen();
+void drawDebugZones();  // Debug: draw white zone boundaries
 void refreshScreen();
 void updateClock();
 void clearZone(Zone zone);

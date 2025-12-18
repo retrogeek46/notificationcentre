@@ -11,7 +11,12 @@ extern TFT_eSPI tft;
 static unsigned long lastWifiCheck = 0;
 
 void initWiFi() {
+  WiFi.disconnect(true);  // Clear any previous connection state
+  delay(100);
+  
   WiFiManager wifiManager;
+  wifiManager.setConnectTimeout(15);  // 15 seconds to connect to saved network
+  wifiManager.setConnectRetries(3);   // Try 3 times before opening config portal
   wifiManager.setConfigPortalTimeout(WIFI_PORTAL_TIMEOUT);
 
   // Show connection instructions on screen

@@ -14,30 +14,41 @@ enum Zone {
   ZONE_COUNT = 4
 };
 
-// Zone boundaries (with 2px padding for background border)
-// Title zone: 2-120 x 2-24
-const int ZONE_TITLE_X_START = 2;
-const int ZONE_TITLE_X_END = 120;
-const int ZONE_TITLE_Y_START = 2;
+// Zone boundaries (zones extend to screen edges)
+// Title zone: 0-135 x 0-24 (expanded 15px towards clock)
+const int ZONE_TITLE_X_START = 0;
+const int ZONE_TITLE_X_END = 136;
+const int ZONE_TITLE_Y_START = 0;
 const int ZONE_TITLE_Y_END = 24;
 
-// Clock zone: 121-318 x 2-24
-const int ZONE_CLOCK_X_START = 121;
-const int ZONE_CLOCK_X_END = 318;
-const int ZONE_CLOCK_Y_START = 2;
+// Clock zone: 136-319 x 0-24
+const int ZONE_CLOCK_X_START = 137;
+const int ZONE_CLOCK_X_END = 319;
+const int ZONE_CLOCK_Y_START = 0;
 const int ZONE_CLOCK_Y_END = 24;
 
-// Status zone: 2-318 x 25-44
-const int ZONE_STATUS_X_START = 2;
-const int ZONE_STATUS_X_END = 318;
+// Status zone: 0-319 x 25-44
+const int ZONE_STATUS_X_START = 0;
+const int ZONE_STATUS_X_END = 319;
 const int ZONE_STATUS_Y_START = 25;
 const int ZONE_STATUS_Y_END = 44;
 
-// Content zone: 2-318 x 45-238
-const int ZONE_CONTENT_X_START = 2;
-const int ZONE_CONTENT_X_END = 318;
+// Content zone: 0-319 x 45-239
+const int ZONE_CONTENT_X_START = 0;
+const int ZONE_CONTENT_X_END = 319;
 const int ZONE_CONTENT_Y_START = 45;
-const int ZONE_CONTENT_Y_END = 238;
+const int ZONE_CONTENT_Y_END = 239;
+
+// Notification slot zones (3 slots of 65px each within content zone)
+// Slot 1: Y 45-109
+const int ZONE_NOTIF1_Y_START = 45;
+const int ZONE_NOTIF1_Y_END = 109;
+// Slot 2: Y 110-174
+const int ZONE_NOTIF2_Y_START = 110;
+const int ZONE_NOTIF2_Y_END = 174;
+// Slot 3: Y 175-239
+const int ZONE_NOTIF3_Y_START = 175;
+const int ZONE_NOTIF3_Y_END = 239;
 
 // ==================== Screen Types ====================
 enum Screen {
@@ -66,7 +77,7 @@ struct Reminder {
   bool triggered;
   time_t nextReviewTime;
   int reviewCount;
-  
+
   Reminder() : id(0), message(""), when(0), limitMinutes(0), completed(false),
                color(TFT_WHITE), triggered(false), nextReviewTime(0), reviewCount(0) {}
 };

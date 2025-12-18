@@ -71,6 +71,9 @@ void loop() {
   // Refresh dirty zones
   refreshScreen();
 
+  // DEBUG: Draw zone boundaries (comment out when done)
+  drawDebugZones();
+
   // WiFi reconnect check
   checkWiFiReconnect();
 
