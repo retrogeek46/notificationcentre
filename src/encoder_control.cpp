@@ -12,6 +12,7 @@ static bool lastBtnState = HIGH;
 static unsigned long lastBtnDebounce = 0;
 
 void initEncoder() {
+#if ENCODER_ENABLED
   // Input-only pins, no internal pull-up - external pull-ups required
   pinMode(ENCODER_CLK, INPUT);
   pinMode(ENCODER_DT, INPUT);
@@ -20,9 +21,15 @@ void initEncoder() {
   lastCLK = digitalRead(ENCODER_CLK);
 
   Serial.println("Encoder initialized");
+#else
+  Serial.println("Encoder disabled in config");
+#endif
 }
 
 void checkEncoder() {
+#if !ENCODER_ENABLED
+  return;
+#endif
   // --- Rotation handling ---
   int currentCLK = digitalRead(ENCODER_CLK);
 

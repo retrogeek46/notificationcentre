@@ -53,6 +53,42 @@ const uint8_t slack_icon_map[] PROGMEM = {
 };
 ```
 
+### 4. Media Watcher Setup (Windows - Now Playing)
+The `tools/` folder contains a Python script that sends currently playing media to your ESP32.
+
+**Prerequisites:**
+- Python 3.10+ installed
+- ESP32 connected to same network
+
+**Installation:**
+```bash
+cd tools
+pip install -r requirements.txt
+```
+
+**Configuration:**
+Edit `tools/media_watcher.py` and update the ESP32 IP:
+```python
+ESP32_IP = "192.168.1.246"  # Change to your ESP32's IP
+```
+
+**Running:**
+```bash
+# Option 1: Run in console (with logs)
+python media_watcher.py
+
+# Option 2: Run hidden in background
+pythonw media_watcher.py
+
+# Option 3: Use the batch script
+run_media_watcher.bat          # Console mode
+run_media_watcher.bat hidden   # Background mode
+run_media_watcher.bat install  # Add to Windows startup
+run_media_watcher.bat remove   # Remove from startup
+```
+
+**Logs:** Saved to `tools/media_watcher.log` (auto-rotates at 1MB)
+
 
 ## 🚀 API Usage
 ### POST `/notify` (Form Data)

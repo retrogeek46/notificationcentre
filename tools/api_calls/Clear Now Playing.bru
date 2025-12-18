@@ -1,0 +1,21 @@
+meta {
+  name: Clear Now Playing
+  type: http
+  seq: 7
+}
+
+post {
+  url: http://{{notif_url}}/nowplaying
+  body: formUrlEncoded
+  auth: inherit
+}
+
+body:form-urlencoded {
+  song: Panorama
+  artist: DROLOE
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

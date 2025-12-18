@@ -93,14 +93,17 @@ void updateClock() {
   }
 }
 // ==================== Status Zone (Now Playing) ====================
-// Sprite for flicker-free rendering
-static TFT_eSprite npSprite = TFT_eSprite(&tft);
+// Sprites for flicker-free rendering
+static TFT_eSprite npSprite = TFT_eSprite(&tft);       // Full status zone (320x18)
+static TFT_eSprite textSprite = TFT_eSprite(&tft);     // Text-only zone (298x18)
 static bool npSpriteCreated = false;
 static bool npZoneCleared = false;  // One-time zone clear
 
 void drawNowPlaying() {
   const int zoneY = 19;
   const int zoneH = 18;
+  const int textZoneX = NOW_PLAYING_TEXT_X;  // 22
+  const int textZoneW = 320 - textZoneX;     // 298
 
   // One-time zone clear to remove setup messages (WiFi OK, etc)
   if (!npZoneCleared) {
@@ -108,10 +111,12 @@ void drawNowPlaying() {
     npZoneCleared = true;
   }
 
-  // Create sprite once (320x18 covers entire status zone)
+  // Create sprites once
   if (!npSpriteCreated) {
     npSprite.createSprite(320, zoneH);
     npSprite.setFreeFont(&FreeMono9pt7b);
+    textSprite.createSprite(textZoneW, zoneH);
+    textSprite.setFreeFont(&FreeMono9pt7b);
     npSpriteCreated = true;
   }
 
@@ -127,7 +132,7 @@ void drawNowPlaying() {
   npSprite.fillCircle(cx, cy, 2, discColor);
 
   // Always draw spinning triangles (using current discFrame)
-  float angle = (discFrame * 45.0) * PI / 180.0;
+  float angle = (discFrame * 5.625) * PI / 180.0;
   int t1x1 = cx + (int)(3 * cos(angle));
   int t1y1 = cy + (int)(3 * sin(angle));
   int t1x2 = cx + (int)(6 * cos(angle - 0.4));
@@ -145,28 +150,36 @@ void drawNowPlaying() {
   int t2y3 = cy + (int)(6 * sin(angle2 + 0.4));
   npSprite.fillTriangle(t2x1, t2y1, t2x2, t2y2, t2x3, t2y3, discColor);
 
-  // Draw scrolling text if active
-  if (nowPlayingActive && nowPlayingSong.length() > 0 &&
-      millis() - nowPlayingUpdated <= NOW_PLAYING_TIMEOUT) {
+  // Draw scrolling text if active (to separate clipped sprite)
+  if (nowPlayingActive && nowPlayingSong.length() > 0) {
 
     String fullText = nowPlayingSong;
     if (nowPlayingArtist.length() > 0) {
       fullText += " - " + nowPlayingArtist;
     }
-    fullText += "    ";
+    fullText += "    ";  // Gap before repeat
 
-    int textLen = fullText.length();
-    int scrollPos = nowPlayingScrollPos % textLen;
+    // Clear text sprite
+    textSprite.fillSprite(COLOR_BACKGROUND);
 
-    String visible = "";
-    for (int i = 0; i < 26; i++) {
-      visible += fullText.charAt((scrollPos + i) % textLen);
+    // Calculate text width in pixels
+    int textWidth = textSprite.textWidth(fullText);
+
+    // Wrap scroll position when we've scrolled past the full text
+    int scrollPixel = nowPlayingScrollPixel % textWidth;
+
+    // Draw text at offset within text sprite (starting at X=0 in sprite coords)
+    int textX = -scrollPixel;
+    textSprite.setTextColor(TFT_MAGENTA);
+    textSprite.drawString(fullText, textX, 3);
+
+    // Draw second copy for seamless wrap
+    if (textX + textWidth < textZoneW) {
+      textSprite.drawString(fullText, textX + textWidth, 3);
     }
 
-    npSprite.setTextColor(TFT_MAGENTA);
-    npSprite.drawString(visible, 22, 3);
-  } else if (millis() - nowPlayingUpdated > NOW_PLAYING_TIMEOUT) {
-    nowPlayingActive = false;
+    // Push text sprite to main sprite at correct position
+    textSprite.pushToSprite(&npSprite, textZoneX, 0);
   }
 
   // Push to screen atomically
@@ -179,7 +192,7 @@ void updateNowPlayingTicker() {
 
   // Always update disc animation (spinning even when not playing)
   if (now - lastDiscUpdate >= NOW_PLAYING_DISC_SPEED) {
-    discFrame = (discFrame + 1) % 8;  // 8 frames for smoother animation
+    discFrame = (discFrame + 1) % 64;  // 64 frames for ultra-smooth animation
     lastDiscUpdate = now;
     setZoneDirty(ZONE_STATUS);  // Always redraw when disc frame changes
   }
@@ -189,18 +202,11 @@ void updateNowPlayingTicker() {
     return;
   }
 
-  // Check for timeout
-  if (millis() - nowPlayingUpdated > NOW_PLAYING_TIMEOUT) {
-    nowPlayingActive = false;
-    setZoneDirty(ZONE_STATUS);
-    return;
-  }
-
   bool needsRedraw = false;
 
-  // Update scroll position
+  // Update scroll position (pixel-based)
   if (now - lastScrollUpdate >= NOW_PLAYING_SCROLL_SPEED) {
-    nowPlayingScrollPos++;
+    nowPlayingScrollPixel += NOW_PLAYING_SCROLL_STEP;
     lastScrollUpdate = now;
     needsRedraw = true;
   }

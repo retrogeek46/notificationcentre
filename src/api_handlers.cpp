@@ -121,7 +121,7 @@ void handleNowPlaying(AsyncWebServerRequest* request) {
     nowPlayingSong = "";
     nowPlayingArtist = "";
     nowPlayingActive = false;
-    nowPlayingScrollPos = 0;
+    nowPlayingScrollPixel = 0;
     // Don't reset discFrame - keep current position for resume
     setZoneDirty(ZONE_STATUS);
 
@@ -134,7 +134,7 @@ void handleNowPlaying(AsyncWebServerRequest* request) {
   nowPlayingSong = song;
   nowPlayingArtist = artist;
   nowPlayingUpdated = millis();
-  nowPlayingScrollPos = 0;
+  nowPlayingScrollPixel = 0;
   lastScrollUpdate = millis();
   // Don't reset discFrame - keep spinning from current position
   lastDiscUpdate = millis();

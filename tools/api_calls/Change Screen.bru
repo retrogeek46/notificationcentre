@@ -1,0 +1,20 @@
+meta {
+  name: Change Screen
+  type: http
+  seq: 4
+}
+
+post {
+  url: http://{{notif_url}}/screen?name=notif
+  body: none
+  auth: inherit
+}
+
+params:query {
+  name: notif
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

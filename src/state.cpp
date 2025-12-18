@@ -19,7 +19,7 @@ int nextReminderId = 1;
 String nowPlayingSong = "";
 String nowPlayingArtist = "";
 unsigned long nowPlayingUpdated = 0;
-int nowPlayingScrollPos = 0;
+int nowPlayingScrollPixel = 0;
 unsigned long lastScrollUpdate = 0;
 int discFrame = 0;
 unsigned long lastDiscUpdate = 0;
@@ -40,7 +40,7 @@ void initState() {
   nowPlayingSong = "";
   nowPlayingArtist = "";
   nowPlayingUpdated = 0;
-  nowPlayingScrollPos = 0;
+  nowPlayingScrollPixel = 0;
   lastScrollUpdate = 0;
   discFrame = 0;
   lastDiscUpdate = 0;

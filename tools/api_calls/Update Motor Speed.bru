@@ -1,0 +1,20 @@
+meta {
+  name: Update Motor Speed
+  type: http
+  seq: 5
+}
+
+post {
+  url: http://{{notif_url}}/motor
+  body: formUrlEncoded
+  auth: inherit
+}
+
+body:form-urlencoded {
+  speed: 255
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

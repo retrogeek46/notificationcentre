@@ -22,7 +22,7 @@ extern int nextReminderId;
 extern String nowPlayingSong;
 extern String nowPlayingArtist;
 extern unsigned long nowPlayingUpdated;
-extern int nowPlayingScrollPos;        // Current scroll offset
+extern int nowPlayingScrollPixel;      // Current scroll pixel offset
 extern unsigned long lastScrollUpdate; // Last scroll tick
 extern int discFrame;                  // Current disc animation frame (0-3)
 extern unsigned long lastDiscUpdate;   // Last disc animation tick
