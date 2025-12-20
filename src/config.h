@@ -63,7 +63,7 @@
 
 // ===== PC Stats Configuration =====
 #define PC_STATS_TIMEOUT 3000          // ms - show idle if no stats for this long
-#define CPU_TEMP_WARN 50               // Flash red if CPU temp exceeds this
+#define CPU_TEMP_WARN 85               // Flash red if CPU temp exceeds this
 #define GPU_TEMP_WARN 75               // Flash red if GPU temp exceeds this
 
 // ===== NTP Configuration =====

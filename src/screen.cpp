@@ -220,7 +220,7 @@ void drawPcStats() {
   // Draw CPU usage and speed (always orange)
   npSprite.setTextColor(COLOR_CPU);
   char cpuRestStr[16];
-  snprintf(cpuRestStr, sizeof(cpuRestStr), "%d%% %.1fGHz", pcCpuUsage, pcCpuSpeed);
+  snprintf(cpuRestStr, sizeof(cpuRestStr), " %d%% %.1fGHz", pcCpuUsage, pcCpuSpeed);
   npSprite.drawString(cpuRestStr, x, y);
   x += npSprite.textWidth(cpuRestStr);
 
@@ -243,7 +243,7 @@ void drawPcStats() {
   // Draw GPU usage (always magenta)
   npSprite.setTextColor(COLOR_GPU);
   char gpuUsageStr[8];
-  snprintf(gpuUsageStr, sizeof(gpuUsageStr), "%d%%", pcGpuUsage);
+  snprintf(gpuUsageStr, sizeof(gpuUsageStr), " %d%%", pcGpuUsage);
   npSprite.drawString(gpuUsageStr, x, y);
   x += npSprite.textWidth(gpuUsageStr);
 

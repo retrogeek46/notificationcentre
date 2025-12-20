@@ -176,14 +176,11 @@ def is_fullscreen():
 # ==================== LibreHardwareMonitor Reader ====================
 
 class LibreHardwareMonitorReader:
-    """Read sensor data from LibreHardwareMonitor via WMI"""
+    """Read sensor data from LibreHardwareMonitor via WMI (optimized queries)"""
 
     def __init__(self):
         self.available = False
         self.wmi_lhm = None
-        self._sensors_cache = []
-        self._last_refresh = 0
-        self._cache_ttl = 0.5  # Refresh sensors every 0.5s
         self._init()
 
     def _init(self):
@@ -194,140 +191,100 @@ class LibreHardwareMonitorReader:
 
         try:
             self.wmi_lhm = wmi.WMI(namespace=r"root\LibreHardwareMonitor")
-            sensors = self.wmi_lhm.Sensor()
-            if sensors:
+            # Quick test query
+            test = self.wmi_lhm.query("SELECT Name FROM Sensor WHERE SensorType='Temperature'")
+            if test:
                 self.available = True
-                log.info(f"LibreHardwareMonitor connected ({len(sensors)} sensors)")
+                log.info("LibreHardwareMonitor connected")
             else:
-                log.warning("LibreHardwareMonitor running but no sensors found")
-                log.warning("Make sure it's running as Administrator")
+                log.warning("LibreHardwareMonitor: no sensors found (run as Admin?)")
         except Exception as e:
             log.error(f"Failed to connect to LibreHardwareMonitor: {e}")
-            log.info("Ensure LibreHardwareMonitor is running as Administrator")
 
-    def _refresh_cache(self):
-        """Refresh the sensor cache if stale"""
-        current_time = asyncio.get_event_loop().time()
-        if current_time - self._last_refresh > self._cache_ttl:
-            try:
-                self._sensors_cache = list(self.wmi_lhm.Sensor())
-                self._last_refresh = current_time
-            except Exception as e:
-                log.debug(f"Error refreshing sensor cache: {e}")
-                self._sensors_cache = []
-
-    def get_sensors(self):
-        """Get all sensors (cached)"""
+    def _query_sensor(self, sensor_type, name_like):
+        """Query a single sensor value using WMI WHERE clause"""
         if not self.available:
-            return []
-        self._refresh_cache()
-        return self._sensors_cache
-
-    def find_sensor(self, sensor_type, *name_keywords):
-        """Find a sensor by type and name keywords (case-insensitive)"""
-        for sensor in self.get_sensors():
-            if sensor.SensorType != sensor_type:
-                continue
-            name_lower = sensor.Name.lower()
-            if all(kw.lower() in name_lower for kw in name_keywords):
-                return sensor.Value
+            return None
+        try:
+            query = f"SELECT Value FROM Sensor WHERE SensorType='{sensor_type}' AND Name LIKE '%{name_like}%'"
+            results = self.wmi_lhm.query(query)
+            if results:
+                return results[0].Value
+        except Exception as e:
+            log.debug(f"Query error ({sensor_type}/{name_like}): {e}")
         return None
 
-    def find_sensors(self, sensor_type, *name_keywords):
-        """Find all sensors matching type and keywords, return list of values"""
-        results = []
-        for sensor in self.get_sensors():
-            if sensor.SensorType != sensor_type:
-                continue
-            name_lower = sensor.Name.lower()
-            if all(kw.lower() in name_lower for kw in name_keywords):
-                if sensor.Value is not None:
-                    results.append(sensor.Value)
-        return results
+    def _query_sensors(self, sensor_type, name_like):
+        """Query multiple sensor values using WMI WHERE clause"""
+        if not self.available:
+            return []
+        try:
+            query = f"SELECT Value FROM Sensor WHERE SensorType='{sensor_type}' AND Name LIKE '%{name_like}%'"
+            results = self.wmi_lhm.query(query)
+            return [r.Value for r in results if r.Value is not None]
+        except Exception as e:
+            log.debug(f"Query error ({sensor_type}/{name_like}): {e}")
+        return []
 
     # ---- CPU Sensors ----
 
     def get_cpu_temp(self):
-        """Get CPU temperature (Package or Core Max)"""
+        """Get CPU temperature (Package preferred)"""
         # Try CPU Package first
-        temp = self.find_sensor("Temperature", "cpu", "package")
+        temp = self._query_sensor("Temperature", "CPU Package")
         if temp:
             return int(temp)
         # Try Core Max
-        temp = self.find_sensor("Temperature", "core", "max")
+        temp = self._query_sensor("Temperature", "Core Max")
         if temp:
             return int(temp)
-        # Try any CPU Core temp
-        temps = self.find_sensors("Temperature", "cpu", "core")
-        if temps:
-            return int(max(temps))
         return 0
 
     def get_cpu_usage(self):
         """Get CPU total usage percentage"""
-        usage = self.find_sensor("Load", "cpu", "total")
+        usage = self._query_sensor("Load", "CPU Total")
         if usage is not None:
             return int(usage)
         return 0
 
     def get_cpu_clock(self):
         """Get average CPU clock speed in GHz"""
-        # Get all CPU core clocks
-        clocks = self.find_sensors("Clock", "cpu", "core")
+        clocks = self._query_sensors("Clock", "CPU Core")
         if clocks:
             avg_mhz = sum(clocks) / len(clocks)
-            return round(avg_mhz / 1000.0, 1)  # MHz to GHz
+            return round(avg_mhz / 1000.0, 1)
         return 0.0
 
     # ---- GPU Sensors ----
 
     def get_gpu_temp(self):
         """Get GPU temperature"""
-        # Try GPU Core first
-        temp = self.find_sensor("Temperature", "gpu", "core")
+        temp = self._query_sensor("Temperature", "GPU Core")
         if temp:
             return int(temp)
-        # Try any GPU temp
-        temps = self.find_sensors("Temperature", "gpu")
-        if temps:
-            return int(temps[0])
         return 0
 
     def get_gpu_usage(self):
         """Get GPU core usage percentage"""
-        usage = self.find_sensor("Load", "gpu", "core")
+        usage = self._query_sensor("Load", "GPU Core")
         if usage is not None:
             return int(usage)
         return 0
 
     # ---- Memory ----
 
-    def get_ram_usage(self):
-        """Get RAM usage percentage"""
-        usage = self.find_sensor("Load", "memory")
-        if usage is not None:
-            return int(usage)
-        # Fallback to psutil
-        return int(psutil.virtual_memory().percent)
-
     def get_ram_used_gb(self):
         """Get RAM used in GB"""
-        used = self.find_sensor("Data", "memory", "used")
+        used = self._query_sensor("Data", "Memory Used")
         if used is not None:
             return int(used)
-        # Fallback to psutil
         return int(psutil.virtual_memory().used / (1024 ** 3))
 
     def get_ram_total_gb(self):
-        """Get total RAM in GB (from psutil - LHM doesn't report this directly)"""
+        """Get total RAM in GB"""
         return int(psutil.virtual_memory().total / (1024 ** 3))
 
-    def dump_sensors(self):
-        """Dump all sensors for debugging"""
-        sensors = self.get_sensors()
-        log.info(f"=== LibreHardwareMonitor Sensors ({len(sensors)} total) ===")
-        for s in sorted(sensors, key=lambda x: (x.SensorType, x.Name)):
-            log.info(f"  [{s.SensorType}] {s.Name}: {s.Value}")
+
 
 
 # ==================== PC Watcher ====================
@@ -353,9 +310,7 @@ class PCWatcher:
         # Initialize LibreHardwareMonitor
         self.lhm = LibreHardwareMonitorReader()
 
-        # Dump sensors for debugging on startup
-        if self.lhm.available:
-            self.lhm.dump_sensors()
+
 
         # NVML as fallback for GPU if LHM doesn't have it
         self.nvml_initialized = False
