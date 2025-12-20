@@ -201,29 +201,51 @@ void drawPcStats() {
   int x = 2;
   int y = 3;
 
+  bool flashOn = (millis() / 300) % 2 == 0;
+
   // Compact format: "65c 45% 4.2GHz | 72c 95% | 8G | ↓12↑2"
-  // CPU stats in orange
-  npSprite.setTextColor(COLOR_CPU);
-  char cpuStr[20];
+  // CPU stats - only flash temp red, keep other stats orange
+  bool cpuOverheat = (pcCpuTemp > CPU_TEMP_WARN);
+
+  // Draw CPU temp (flashing if overheating)
   if (pcCpuTemp > 0) {
-    snprintf(cpuStr, sizeof(cpuStr), "%dc %d%% %.1fGHz", pcCpuTemp, pcCpuUsage, pcCpuSpeed);
-  } else {
-    snprintf(cpuStr, sizeof(cpuStr), "%d%% %.1fGHz", pcCpuUsage, pcCpuSpeed);
+    uint16_t cpuTempColor = (cpuOverheat && flashOn) ? TFT_RED : COLOR_CPU;
+    npSprite.setTextColor(cpuTempColor);
+    char cpuTempStr[8];
+    snprintf(cpuTempStr, sizeof(cpuTempStr), "%dc ", pcCpuTemp);
+    npSprite.drawString(cpuTempStr, x, y);
+    x += npSprite.textWidth(cpuTempStr);
   }
-  npSprite.drawString(cpuStr, x, y);
-  x += npSprite.textWidth(cpuStr);
+
+  // Draw CPU usage and speed (always orange)
+  npSprite.setTextColor(COLOR_CPU);
+  char cpuRestStr[16];
+  snprintf(cpuRestStr, sizeof(cpuRestStr), "%d%% %.1fGHz", pcCpuUsage, pcCpuSpeed);
+  npSprite.drawString(cpuRestStr, x, y);
+  x += npSprite.textWidth(cpuRestStr);
 
   // Separator (no space after GHz)
   npSprite.setTextColor(COLOR_SEP);
   npSprite.drawString("| ", x, y);
   x += npSprite.textWidth("| ");
 
-  // GPU stats in magenta
+  // GPU stats - only flash temp red, keep usage magenta
+  bool gpuOverheat = (pcGpuTemp > GPU_TEMP_WARN);
+
+  // Draw GPU temp (flashing if overheating)
+  uint16_t gpuTempColor = (gpuOverheat && flashOn) ? TFT_RED : COLOR_GPU;
+  npSprite.setTextColor(gpuTempColor);
+  char gpuTempStr[8];
+  snprintf(gpuTempStr, sizeof(gpuTempStr), "%dc ", pcGpuTemp);
+  npSprite.drawString(gpuTempStr, x, y);
+  x += npSprite.textWidth(gpuTempStr);
+
+  // Draw GPU usage (always magenta)
   npSprite.setTextColor(COLOR_GPU);
-  char gpuStr[12];
-  snprintf(gpuStr, sizeof(gpuStr), "%dc %d%%", pcGpuTemp, pcGpuUsage);
-  npSprite.drawString(gpuStr, x, y);
-  x += npSprite.textWidth(gpuStr);
+  char gpuUsageStr[8];
+  snprintf(gpuUsageStr, sizeof(gpuUsageStr), "%d%%", pcGpuUsage);
+  npSprite.drawString(gpuUsageStr, x, y);
+  x += npSprite.textWidth(gpuUsageStr);
 
   // Separator (no space around RAM)
   npSprite.setTextColor(COLOR_SEP);

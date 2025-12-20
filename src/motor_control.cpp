@@ -12,8 +12,8 @@ void initMotor() {
   pinMode(MOTOR_IN1, OUTPUT);
   digitalWrite(MOTOR_IN1, HIGH);  // Always forward
 
-  // Start with motor off
-  ledcWrite(MOTOR_PWM_CHANNEL, 0);
+  // Start with default motor speed
+  ledcWrite(MOTOR_PWM_CHANNEL, 200);
 
   Serial.println("Motor PWM ready (single direction, 1kHz, 8-bit)");
 }

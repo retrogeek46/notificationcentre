@@ -3,11 +3,15 @@ PC Watcher for ESP32 Notification Center
 
 Unified script that handles:
 - Media watching: Sends now playing info when NOT gaming
-- PC stats: Sends hardware stats when gaming
+- PC stats: Sends hardware stats via LibreHardwareMonitor
 
 Gaming mode activates automatically when:
 - Active window matches a game in games.txt
 - Active window is fullscreen
+
+Requirements:
+- LibreHardwareMonitor running as Administrator with WMI enabled
+- pynvml for NVIDIA GPU stats (optional fallback)
 
 Usage: pythonw pc_watcher.py  (hidden window)
    or: python pc_watcher.py   (with console)
@@ -28,13 +32,12 @@ from winrt.windows.media.control import (
     GlobalSystemMediaTransportControlsSessionPlaybackStatus as PlaybackStatus,
 )
 
-# NVIDIA GPU monitoring
+# NVIDIA GPU monitoring (fallback if LHM GPU fails)
 try:
     import pynvml
     NVML_AVAILABLE = True
 except ImportError:
     NVML_AVAILABLE = False
-    print("WARNING: pynvml not installed - GPU stats unavailable")
 
 # Windows API for active window detection
 try:
@@ -45,16 +48,16 @@ try:
     WIN32_AVAILABLE = True
 except ImportError:
     WIN32_AVAILABLE = False
-    print("WARNING: pywin32 not installed - game detection unavailable")
 
-# CPU temperature via WMI (Windows)
+# WMI for LibreHardwareMonitor access
 try:
     import wmi
     WMI_AVAILABLE = True
 except ImportError:
     WMI_AVAILABLE = False
 
-# Configuration
+# ==================== Configuration ====================
+
 ESP32_IP = "192.168.1.246"
 ESP32_NOWPLAYING_URL = f"http://{ESP32_IP}/nowplaying"
 ESP32_STATS_URL = f"http://{ESP32_IP}/pcstats"
@@ -71,6 +74,8 @@ LOG_FILE = os.path.join(SCRIPT_DIR, "pc_watcher.log")
 LOG_MAX_BYTES = 1024 * 1024  # 1 MB
 LOG_BACKUP_COUNT = 2
 
+
+# ==================== Logging Setup ====================
 
 def setup_logging():
     logger = logging.getLogger("PCWatcher")
@@ -97,6 +102,8 @@ def setup_logging():
 log = setup_logging()
 
 
+# ==================== Utilities ====================
+
 def load_games_list():
     """Load list of game executables from games.txt"""
     games = set()
@@ -110,75 +117,6 @@ def load_games_list():
     else:
         log.warning(f"games.txt not found at {GAMES_FILE}")
     return games
-
-
-class HWiNFOReader:
-    """Helper class to read sensor data from HWiNFO64 registry"""
-
-    REGISTRY_PATH = r"SOFTWARE\HWiNFO64\VSB"
-
-    def __init__(self):
-        self.available = False
-        self._check_available()
-
-    def _check_available(self):
-        """Check if HWiNFO registry is accessible"""
-        try:
-            import winreg
-            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, self.REGISTRY_PATH)
-            winreg.CloseKey(key)
-            self.available = True
-            log.info("HWiNFO64 registry detected")
-        except Exception:
-            self.available = False
-
-    def read_sensors(self):
-        """Read all sensor data from registry, returns dict of {label: raw_value}"""
-        if not self.available:
-            return {}
-
-        try:
-            import winreg
-            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, self.REGISTRY_PATH)
-
-            labels = {}
-            raw_values = {}
-            i = 0
-
-            while True:
-                try:
-                    name, data, _ = winreg.EnumValue(key, i)
-                    if name.startswith("Label"):
-                        idx = name[5:]  # Get number after "Label"
-                        labels[idx] = data
-                    elif name.startswith("ValueRaw"):
-                        idx = name[8:]  # Get number after "ValueRaw"
-                        raw_values[idx] = data
-                    i += 1
-                except OSError:
-                    break
-
-            winreg.CloseKey(key)
-
-            # Build dict mapping label -> raw value
-            sensors = {}
-            for idx, label in labels.items():
-                if idx in raw_values:
-                    sensors[label] = raw_values[idx]
-
-            return sensors
-
-        except Exception as e:
-            log.debug(f"HWiNFO registry read error: {e}")
-            return {}
-
-    def get_sensor_by_keywords(self, sensors, *keywords):
-        """Find a sensor value by matching keywords in label (case-insensitive)"""
-        for label, value in sensors.items():
-            label_lower = label.lower()
-            if all(kw.lower() in label_lower for kw in keywords):
-                return value
-        return None
 
 
 def get_active_window_exe():
@@ -215,19 +153,15 @@ def is_fullscreen():
         if hwnd == 0:
             return False
 
-        # Get window rect
         rect = win32gui.GetWindowRect(hwnd)
         window_width = rect[2] - rect[0]
         window_height = rect[3] - rect[1]
 
-        # Get screen dimensions
         screen_width = win32api.GetSystemMetrics(win32con.SM_CXSCREEN)
         screen_height = win32api.GetSystemMetrics(win32con.SM_CYSCREEN)
 
-        # Check if window covers the entire screen
         is_fs = (window_width >= screen_width and window_height >= screen_height)
 
-        # Also check for borderless fullscreen (window position at 0,0)
         if is_fs or (rect[0] <= 0 and rect[1] <= 0 and
                      window_width >= screen_width - 2 and
                      window_height >= screen_height - 2):
@@ -238,6 +172,165 @@ def is_fullscreen():
         log.debug(f"Error checking fullscreen: {e}")
         return False
 
+
+# ==================== LibreHardwareMonitor Reader ====================
+
+class LibreHardwareMonitorReader:
+    """Read sensor data from LibreHardwareMonitor via WMI"""
+
+    def __init__(self):
+        self.available = False
+        self.wmi_lhm = None
+        self._sensors_cache = []
+        self._last_refresh = 0
+        self._cache_ttl = 0.5  # Refresh sensors every 0.5s
+        self._init()
+
+    def _init(self):
+        """Initialize connection to LibreHardwareMonitor WMI"""
+        if not WMI_AVAILABLE:
+            log.warning("WMI not available - LibreHardwareMonitor won't work")
+            return
+
+        try:
+            self.wmi_lhm = wmi.WMI(namespace=r"root\LibreHardwareMonitor")
+            sensors = self.wmi_lhm.Sensor()
+            if sensors:
+                self.available = True
+                log.info(f"LibreHardwareMonitor connected ({len(sensors)} sensors)")
+            else:
+                log.warning("LibreHardwareMonitor running but no sensors found")
+                log.warning("Make sure it's running as Administrator")
+        except Exception as e:
+            log.error(f"Failed to connect to LibreHardwareMonitor: {e}")
+            log.info("Ensure LibreHardwareMonitor is running as Administrator")
+
+    def _refresh_cache(self):
+        """Refresh the sensor cache if stale"""
+        current_time = asyncio.get_event_loop().time()
+        if current_time - self._last_refresh > self._cache_ttl:
+            try:
+                self._sensors_cache = list(self.wmi_lhm.Sensor())
+                self._last_refresh = current_time
+            except Exception as e:
+                log.debug(f"Error refreshing sensor cache: {e}")
+                self._sensors_cache = []
+
+    def get_sensors(self):
+        """Get all sensors (cached)"""
+        if not self.available:
+            return []
+        self._refresh_cache()
+        return self._sensors_cache
+
+    def find_sensor(self, sensor_type, *name_keywords):
+        """Find a sensor by type and name keywords (case-insensitive)"""
+        for sensor in self.get_sensors():
+            if sensor.SensorType != sensor_type:
+                continue
+            name_lower = sensor.Name.lower()
+            if all(kw.lower() in name_lower for kw in name_keywords):
+                return sensor.Value
+        return None
+
+    def find_sensors(self, sensor_type, *name_keywords):
+        """Find all sensors matching type and keywords, return list of values"""
+        results = []
+        for sensor in self.get_sensors():
+            if sensor.SensorType != sensor_type:
+                continue
+            name_lower = sensor.Name.lower()
+            if all(kw.lower() in name_lower for kw in name_keywords):
+                if sensor.Value is not None:
+                    results.append(sensor.Value)
+        return results
+
+    # ---- CPU Sensors ----
+
+    def get_cpu_temp(self):
+        """Get CPU temperature (Package or Core Max)"""
+        # Try CPU Package first
+        temp = self.find_sensor("Temperature", "cpu", "package")
+        if temp:
+            return int(temp)
+        # Try Core Max
+        temp = self.find_sensor("Temperature", "core", "max")
+        if temp:
+            return int(temp)
+        # Try any CPU Core temp
+        temps = self.find_sensors("Temperature", "cpu", "core")
+        if temps:
+            return int(max(temps))
+        return 0
+
+    def get_cpu_usage(self):
+        """Get CPU total usage percentage"""
+        usage = self.find_sensor("Load", "cpu", "total")
+        if usage is not None:
+            return int(usage)
+        return 0
+
+    def get_cpu_clock(self):
+        """Get average CPU clock speed in GHz"""
+        # Get all CPU core clocks
+        clocks = self.find_sensors("Clock", "cpu", "core")
+        if clocks:
+            avg_mhz = sum(clocks) / len(clocks)
+            return round(avg_mhz / 1000.0, 1)  # MHz to GHz
+        return 0.0
+
+    # ---- GPU Sensors ----
+
+    def get_gpu_temp(self):
+        """Get GPU temperature"""
+        # Try GPU Core first
+        temp = self.find_sensor("Temperature", "gpu", "core")
+        if temp:
+            return int(temp)
+        # Try any GPU temp
+        temps = self.find_sensors("Temperature", "gpu")
+        if temps:
+            return int(temps[0])
+        return 0
+
+    def get_gpu_usage(self):
+        """Get GPU core usage percentage"""
+        usage = self.find_sensor("Load", "gpu", "core")
+        if usage is not None:
+            return int(usage)
+        return 0
+
+    # ---- Memory ----
+
+    def get_ram_usage(self):
+        """Get RAM usage percentage"""
+        usage = self.find_sensor("Load", "memory")
+        if usage is not None:
+            return int(usage)
+        # Fallback to psutil
+        return int(psutil.virtual_memory().percent)
+
+    def get_ram_used_gb(self):
+        """Get RAM used in GB"""
+        used = self.find_sensor("Data", "memory", "used")
+        if used is not None:
+            return int(used)
+        # Fallback to psutil
+        return int(psutil.virtual_memory().used / (1024 ** 3))
+
+    def get_ram_total_gb(self):
+        """Get total RAM in GB (from psutil - LHM doesn't report this directly)"""
+        return int(psutil.virtual_memory().total / (1024 ** 3))
+
+    def dump_sensors(self):
+        """Dump all sensors for debugging"""
+        sensors = self.get_sensors()
+        log.info(f"=== LibreHardwareMonitor Sensors ({len(sensors)} total) ===")
+        for s in sorted(sensors, key=lambda x: (x.SensorType, x.Name)):
+            log.info(f"  [{s.SensorType}] {s.Name}: {s.Value}")
+
+
+# ==================== PC Watcher ====================
 
 class PCWatcher:
     def __init__(self):
@@ -251,46 +344,39 @@ class PCWatcher:
         self.last_playing = False
         self.session_mgr = None
 
-        # PC stats state
+        # Network speed tracking
         self.last_net_recv = 0
         self.last_net_sent = 0
         self.last_net_time = 0
         self.last_stats_update = 0
+
+        # Initialize LibreHardwareMonitor
+        self.lhm = LibreHardwareMonitorReader()
+
+        # Dump sensors for debugging on startup
+        if self.lhm.available:
+            self.lhm.dump_sensors()
+
+        # NVML as fallback for GPU if LHM doesn't have it
         self.nvml_initialized = False
-        self.wmi_instance = None
-
-        # Initialize HWiNFO reader (primary source for CPU stats)
-        self.hwinfo = HWiNFOReader()
-
-        # Initialize NVML for GPU monitoring
         if NVML_AVAILABLE:
             try:
                 pynvml.nvmlInit()
                 self.nvml_initialized = True
-                log.info("NVML initialized successfully")
+                log.info("NVML initialized (fallback for GPU)")
             except Exception as e:
-                log.warning(f"Failed to initialize NVML: {e}")
-
-        # Initialize WMI for CPU temp (fallback)
-        if WMI_AVAILABLE:
-            try:
-                self.wmi_instance = wmi.WMI(namespace="root\\wmi")
-                log.info("WMI initialized successfully")
-            except Exception as e:
-                log.warning(f"Failed to initialize WMI: {e}")
+                log.debug(f"NVML init failed: {e}")
 
     # ==================== Gaming Detection ====================
 
     def check_gaming_mode(self):
         """Check if gaming mode should be active"""
-        # Check active window against games list (partial match)
         active_exe = get_active_window_exe()
         if active_exe:
             for game in self.games_list:
                 if game in active_exe or active_exe in game:
                     return True
 
-        # Check for fullscreen
         if is_fullscreen():
             return True
 
@@ -321,11 +407,9 @@ class PCWatcher:
             if not session:
                 return None, None, False
 
-            # Get playback status
             playback_info = session.get_playback_info()
             is_playing = playback_info.playback_status == PlaybackStatus.PLAYING
 
-            # Get media properties
             props = await session.try_get_media_properties_async()
             title = props.title or ""
             artist = props.artist or ""
@@ -355,92 +439,65 @@ class PCWatcher:
 
     def get_cpu_temp(self):
         """Get CPU temperature in Celsius"""
-        # Try HWiNFO64 first (uses ValueRaw for clean numeric values)
-        if self.hwinfo.available:
-            sensors = self.hwinfo.read_sensors()
-            # Look for CPU temp sensor (try various common label patterns)
-            temp = self.hwinfo.get_sensor_by_keywords(sensors, "cpu", "temp")
-            if temp is None:
-                temp = self.hwinfo.get_sensor_by_keywords(sensors, "package", "temp")
-            if temp is None:
-                temp = self.hwinfo.get_sensor_by_keywords(sensors, "core", "temp")
-            if temp is not None:
-                try:
-                    return int(float(temp))
-                except (ValueError, TypeError):
-                    pass
-
-        # Fallback: Try WMI thermal zone
-        if self.wmi_instance:
-            try:
-                temps = self.wmi_instance.MSAcpi_ThermalZoneTemperature()
-                if temps:
-                    temp_k = temps[0].CurrentTemperature / 10.0
-                    temp_c = temp_k - 273.15
-                    if 0 < temp_c < 150:
-                        return int(temp_c)
-            except Exception:
-                pass
-
-        # Fallback: try psutil sensors
-        try:
-            temps = psutil.sensors_temperatures()
-            if "coretemp" in temps:
-                return int(temps["coretemp"][0].current)
-            elif "cpu_thermal" in temps:
-                return int(temps["cpu_thermal"][0].current)
-        except Exception:
-            pass
-
-        return 0  # Unknown
+        if self.lhm.available:
+            temp = self.lhm.get_cpu_temp()
+            if temp > 0:
+                return temp
+        return 0
 
     def get_cpu_usage(self):
         """Get CPU usage percentage"""
-        # Try HWiNFO64 first
-        if self.hwinfo.available:
-            sensors = self.hwinfo.read_sensors()
-            usage = self.hwinfo.get_sensor_by_keywords(sensors, "cpu", "usage")
-            if usage is None:
-                usage = self.hwinfo.get_sensor_by_keywords(sensors, "total", "usage")
-            if usage is not None:
-                try:
-                    return int(float(usage))
-                except (ValueError, TypeError):
-                    pass
-
-        # Fallback to psutil
+        if self.lhm.available:
+            usage = self.lhm.get_cpu_usage()
+            if usage > 0:
+                return usage
         return int(psutil.cpu_percent(interval=None))
 
     def get_cpu_speed(self):
         """Get current CPU frequency in GHz"""
+        if self.lhm.available:
+            speed = self.lhm.get_cpu_clock()
+            if speed > 0:
+                return speed
+        # Fallback to psutil
         try:
             freq = psutil.cpu_freq()
             if freq:
-                return round(freq.current / 1000.0, 1)  # MHz to GHz
+                return round(freq.current / 1000.0, 1)
         except Exception:
             pass
         return 0.0
 
     def get_ram_usage(self):
         """Get RAM usage (used, total) in GB"""
+        if self.lhm.available:
+            used = self.lhm.get_ram_used_gb()
+            total = self.lhm.get_ram_total_gb()
+            return used, total
+        # Fallback
         mem = psutil.virtual_memory()
-        used_gb = int(mem.used / (1024 ** 3))
-        total_gb = int(mem.total / (1024 ** 3))
-        return used_gb, total_gb
+        return int(mem.used / (1024 ** 3)), int(mem.total / (1024 ** 3))
 
     def get_gpu_stats(self):
-        """Get GPU temperature and usage from NVIDIA GPU"""
-        if not self.nvml_initialized:
-            return 0, 0
+        """Get GPU temperature and usage"""
+        # Try LibreHardwareMonitor first
+        if self.lhm.available:
+            temp = self.lhm.get_gpu_temp()
+            usage = self.lhm.get_gpu_usage()
+            if temp > 0 or usage > 0:
+                return temp, usage
 
-        try:
-            handle = pynvml.nvmlDeviceGetHandleByIndex(0)  # First GPU
-            temp = pynvml.nvmlDeviceGetTemperature(handle, pynvml.NVML_TEMPERATURE_GPU)
-            util = pynvml.nvmlDeviceGetUtilizationRates(handle)
-            return int(temp), int(util.gpu)
-        except Exception as e:
-            log.debug(f"Error getting GPU stats: {e}")
-            return 0, 0
+        # Fallback to NVML for NVIDIA GPUs
+        if self.nvml_initialized:
+            try:
+                handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+                temp = pynvml.nvmlDeviceGetTemperature(handle, pynvml.NVML_TEMPERATURE_GPU)
+                util = pynvml.nvmlDeviceGetUtilizationRates(handle)
+                return int(temp), int(util.gpu)
+            except Exception as e:
+                log.debug(f"NVML error: {e}")
+
+        return 0, 0
 
     def get_net_speed(self):
         """Get current download and upload speed in Mbps"""
@@ -509,7 +566,6 @@ class PCWatcher:
         log.info(f"PC Watcher started - target: {ESP32_IP}")
         log.info(f"Games file: {GAMES_FILE}")
         log.info(f"Log file: {LOG_FILE}")
-        log.info("Press Ctrl+C to stop")
 
         while True:
             current_time = asyncio.get_event_loop().time()
@@ -522,39 +578,27 @@ class PCWatcher:
                 self.gaming_mode = should_game
                 self.send_gaming_mode(self.gaming_mode)
 
-                # Reset media state when entering gaming mode
                 if self.gaming_mode:
                     self.last_song = ""
                     self.last_artist = ""
                     self.last_playing = False
 
-            if self.gaming_mode:
-                # GAMING MODE: Send PC stats at slower interval (media is ignored)
-                if current_time - self.last_stats_update >= STATS_INTERVAL:
-                    self.send_stats()
-                    self.last_stats_update = current_time
-            else:
-                # NORMAL MODE: Watch media AND send stats
-                # Always send stats so ESP32 can show them when idle
-                if current_time - self.last_stats_update >= STATS_INTERVAL:
-                    self.send_stats()
-                    self.last_stats_update = current_time
+            # Always send stats at the configured interval
+            if current_time - self.last_stats_update >= STATS_INTERVAL:
+                self.send_stats()
+                self.last_stats_update = current_time
 
-                # Also watch media
+            # Watch media when not gaming
+            if not self.gaming_mode:
                 song, artist, is_playing = await self.get_media_info()
 
-                # Determine if we need to send an update
                 song_changed = (song != self.last_song or artist != self.last_artist)
                 state_changed = (is_playing != self.last_playing)
 
                 if song_changed or state_changed:
-                    log.debug(f"Media state change: song_changed={song_changed}, state_changed={state_changed}")
-
                     if is_playing and song:
-                        # Playing new or different song
                         self.send_now_playing(song, artist)
                     elif not is_playing and self.last_playing:
-                        # Just paused/stopped - clear display
                         self.send_now_playing("", "")
 
                     self.last_song = song or ""
@@ -571,6 +615,8 @@ class PCWatcher:
             except Exception:
                 pass
 
+
+# ==================== Entry Point ====================
 
 def main():
     log.info("=" * 50)
