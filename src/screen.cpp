@@ -198,24 +198,28 @@ void drawPcStats() {
   npSprite.fillSprite(COLOR_BACKGROUND);
   npSprite.setTextSize(1);
 
-  int x = 2;
+  int x = 5;
   int y = 3;
 
   bool flashOn = (millis() / 300) % 2 == 0;
 
   // Compact format: "65c 45% 4.2GHz | 72c 95% | 8G | ↓12↑2"
-  // CPU stats - only flash temp red, keep other stats orange
+  // CPU stats - flash red if overheating, blue if sensor error (0)
   bool cpuOverheat = (pcCpuTemp > CPU_TEMP_WARN);
+  bool cpuSensorError = (pcCpuTemp == 0);
 
-  // Draw CPU temp (flashing if overheating)
-  if (pcCpuTemp > 0) {
-    uint16_t cpuTempColor = (cpuOverheat && flashOn) ? TFT_RED : COLOR_CPU;
-    npSprite.setTextColor(cpuTempColor);
-    char cpuTempStr[8];
-    snprintf(cpuTempStr, sizeof(cpuTempStr), "%dc ", pcCpuTemp);
-    npSprite.drawString(cpuTempStr, x, y);
-    x += npSprite.textWidth(cpuTempStr);
+  // Draw CPU temp - always show, flash blue if 0 (sensor error), red if overheating
+  uint16_t cpuTempColor = COLOR_CPU;
+  if (cpuSensorError && flashOn) {
+    cpuTempColor = TFT_BLUE;  // Flash blue for sensor error
+  } else if (cpuOverheat && flashOn) {
+    cpuTempColor = TFT_RED;   // Flash red for overheating
   }
+  npSprite.setTextColor(cpuTempColor);
+  char cpuTempStr[8];
+  snprintf(cpuTempStr, sizeof(cpuTempStr), "%dc ", pcCpuTemp);
+  npSprite.drawString(cpuTempStr, x, y);
+  x += npSprite.textWidth(cpuTempStr);
 
   // Draw CPU usage and speed (always orange)
   npSprite.setTextColor(COLOR_CPU);
