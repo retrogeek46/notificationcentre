@@ -45,6 +45,7 @@ extern unsigned long pcStatsUpdated;   // Last update timestamp
 void initState();
 void setZoneDirty(Zone zone);
 void setAllZonesDirty();
+void setAllContentDirty();  // Helper to mark all 3 content zones dirty
 void clearZoneDirty(Zone zone);
 bool isZoneDirty(Zone zone);
 

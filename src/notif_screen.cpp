@@ -12,7 +12,7 @@ void drawNotifContent() {
   tft.setTextSize(1);
 
   // Y start positions for each notification slot (only 3 visible slots)
-  const int slotYStarts[] = {ZONE_NOTIF1_Y_START, ZONE_NOTIF2_Y_START, ZONE_NOTIF3_Y_START};
+  const int slotYStarts[] = {ZONE_CONTENT1_Y_START, ZONE_CONTENT2_Y_START, ZONE_CONTENT3_Y_START};
   const int numSlots = 3;  // Only 3 visible slots on screen
 
   for (int i = 0; i < min(MAX_NOTIFICATIONS, numSlots); i++) {
@@ -74,7 +74,7 @@ void addNotification(String app, String from, String msg, uint16_t color) {
   // Switch to notifications screen
   currentScreen = SCREEN_NOTIFS;
   setZoneDirty(ZONE_TITLE);
-  setZoneDirty(ZONE_CONTENT);
+  setAllContentDirty();
 }
 
 // ==================== Clear All ====================
@@ -83,7 +83,7 @@ void clearAllNotifications() {
     notifications[i] = Notification();
   }
   ledOff();
-  setZoneDirty(ZONE_CONTENT);
+  setAllContentDirty();
 }
 
 // ==================== Helpers ====================

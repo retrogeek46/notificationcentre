@@ -45,7 +45,7 @@ void drawReminderContent() {
   }
 
   // Display up to 3 reminders (matching 65px slots)
-  const int slotYStarts[] = {ZONE_NOTIF1_Y_START, ZONE_NOTIF2_Y_START, ZONE_NOTIF3_Y_START};
+  const int slotYStarts[] = {ZONE_CONTENT1_Y_START, ZONE_CONTENT2_Y_START, ZONE_CONTENT3_Y_START};
   int shown = 0;
   time_t now = time(nullptr);
 
@@ -127,7 +127,7 @@ void checkReminders() {
       blinkLed(3, 150);
       currentScreen = SCREEN_REMINDER;
       setZoneDirty(ZONE_TITLE);
-      setZoneDirty(ZONE_CONTENT);
+      setAllContentDirty();
     }
     // Follow-up trigger
     else if (r.triggered && r.limitMinutes > 0 && r.nextReviewTime != 0 && now >= r.nextReviewTime) {
@@ -136,7 +136,7 @@ void checkReminders() {
       Serial.printf("Reminder follow-up id=%d reviewCount=%d\n", r.id, r.reviewCount);
 
       blinkLed(2, 100);
-      setZoneDirty(ZONE_CONTENT);
+      setAllContentDirty();
     }
   }
 }
@@ -164,7 +164,7 @@ int addReminder(String msg, time_t when, int limitMins, uint16_t color) {
   reminders[idx].nextReviewTime = 0;
   reminders[idx].reviewCount = 0;
 
-  setZoneDirty(ZONE_CONTENT);
+  setAllContentDirty();
   saveReminders();  // Persist to flash
 
   return reminders[idx].id;
@@ -179,7 +179,7 @@ bool completeReminder(int id) {
       reminders[i].nextReviewTime = 0;
       reminders[i].reviewCount = 0;
       ledOff();
-      setZoneDirty(ZONE_CONTENT);
+      setAllContentDirty();
       saveReminders();  // Persist to flash
       Serial.printf("Reminder %d completed\n", id);
       return true;

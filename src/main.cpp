@@ -61,7 +61,7 @@ void loop() {
   // Refresh reminder screen periodically (for countdown updates)
   static unsigned long lastReminderRefresh = 0;
   if (currentScreen == SCREEN_REMINDER && millis() - lastReminderRefresh > REMINDER_REFRESH_INTERVAL) {
-    setZoneDirty(ZONE_CONTENT);
+    setAllContentDirty();
     lastReminderRefresh = millis();
   }
 

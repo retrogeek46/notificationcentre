@@ -9,7 +9,7 @@
 #define TFT_ROTATION 3
 
 // Debugging
-#define DEBUG_SHOW_ZONES 1
+#define DEBUG_SHOW_ZONES 0
 
 // Motor driver pins (L298N Motor A) - Left side only
 #define MOTOR_ENA 33   // PWM speed control

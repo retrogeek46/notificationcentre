@@ -162,7 +162,7 @@ void handleScreenSwitch(AsyncWebServerRequest* request) {
   }
 
   setZoneDirty(ZONE_TITLE);
-  setZoneDirty(ZONE_CONTENT);
+  setAllContentDirty();
 
   request->send(200, "application/json",
     "{\"status\":\"ok\",\"screen\":\"" + String((currentScreen == SCREEN_REMINDER) ? "reminder" : "notifs") + "\"}");

@@ -6,11 +6,16 @@
 #include "icons/icons.h"
 #include "fonts/MDIOTrial_Regular8pt7b.h"
 #include "fonts/MDIOTrial_Bold8pt7b.h"
+#include "sprites/sprite_title.h"
+#include "sprites/sprite_clock.h"
+#include "sprites/sprite_status.h"
+#include "sprites/sprite_content1.h"
+#include "sprites/sprite_content2.h"
+#include "sprites/sprite_content3.h"
 #include <time.h>
 
-TFT_eSPI tft = TFT_eSPI();
 
-static char previousTimeStr[25] = "                    ";
+TFT_eSPI tft = TFT_eSPI();
 
 // ==================== Init ====================
 void initScreen() {
@@ -44,87 +49,117 @@ void drawDebugZones() {
                ZONE_STATUS_X_END - ZONE_STATUS_X_START + 1,
                ZONE_STATUS_Y_END - ZONE_STATUS_Y_START + 1, debugColor);
 
-  // Content zone border
-  tft.drawRect(ZONE_CONTENT_X_START, ZONE_CONTENT_Y_START,
-               ZONE_CONTENT_X_END - ZONE_CONTENT_X_START + 1,
-               ZONE_CONTENT_Y_END - ZONE_CONTENT_Y_START + 1, debugColor);
-
-  // Notification content slots (3 slots of 65px each)
-  // Slot 1: Y 45-109
-  tft.drawRect(ZONE_CONTENT_X_START, ZONE_NOTIF1_Y_START,
-               ZONE_CONTENT_X_END - ZONE_CONTENT_X_START + 1,
-               ZONE_NOTIF1_Y_END - ZONE_NOTIF1_Y_START + 1, debugColor);
-  // Slot 2: Y 110-174
-  tft.drawRect(ZONE_CONTENT_X_START, ZONE_NOTIF2_Y_START,
-               ZONE_CONTENT_X_END - ZONE_CONTENT_X_START + 1,
-               ZONE_NOTIF2_Y_END - ZONE_NOTIF2_Y_START + 1, debugColor);
-  // Slot 3: Y 175-239
-  tft.drawRect(ZONE_CONTENT_X_START, ZONE_NOTIF3_Y_START,
-               ZONE_CONTENT_X_END - ZONE_CONTENT_X_START + 1,
-               ZONE_NOTIF3_Y_END - ZONE_NOTIF3_Y_START + 1, debugColor);
+  // Content zone borders (3 slots)
+  tft.drawRect(ZONE_CONTENT1_X_START, ZONE_CONTENT1_Y_START,
+               ZONE_CONTENT1_X_END - ZONE_CONTENT1_X_START + 1,
+               ZONE_CONTENT1_Y_END - ZONE_CONTENT1_Y_START + 1, debugColor);
+  tft.drawRect(ZONE_CONTENT2_X_START, ZONE_CONTENT2_Y_START,
+               ZONE_CONTENT2_X_END - ZONE_CONTENT2_X_START + 1,
+               ZONE_CONTENT2_Y_END - ZONE_CONTENT2_Y_START + 1, debugColor);
+  tft.drawRect(ZONE_CONTENT3_X_START, ZONE_CONTENT3_Y_START,
+               ZONE_CONTENT3_X_END - ZONE_CONTENT3_X_START + 1,
+               ZONE_CONTENT3_Y_END - ZONE_CONTENT3_Y_START + 1, debugColor);
 }
 
 // ==================== Zone Helpers ====================
 void clearZone(Zone zone) {
-  int x_start, x_end, y_start, y_end;
-
   switch (zone) {
     case ZONE_TITLE:
-      x_start = ZONE_TITLE_X_START;
-      x_end = ZONE_TITLE_X_END;
-      y_start = ZONE_TITLE_Y_START;
-      y_end = ZONE_TITLE_Y_END;
+      // Title sprite is drawn by drawTitle() - just mark dirty
+      tft.pushImage(ZONE_TITLE_X_START, ZONE_TITLE_Y_START,
+                    SPRITE_TITLE_WIDTH, SPRITE_TITLE_HEIGHT, SPRITE_TITLE);
       break;
     case ZONE_CLOCK:
-      x_start = ZONE_CLOCK_X_START;
-      x_end = ZONE_CLOCK_X_END;
-      y_start = ZONE_CLOCK_Y_START;
-      y_end = ZONE_CLOCK_Y_END;
+      // Clock sprite is drawn by updateClock() - just mark dirty
+      tft.pushImage(ZONE_CLOCK_X_START, ZONE_CLOCK_Y_START,
+                    SPRITE_CLOCK_WIDTH, SPRITE_CLOCK_HEIGHT, SPRITE_CLOCK);
       break;
     case ZONE_STATUS:
-      x_start = ZONE_STATUS_X_START;
-      x_end = ZONE_STATUS_X_END;
-      y_start = ZONE_STATUS_Y_START;
-      y_end = ZONE_STATUS_Y_END;
+      // Status sprite is drawn by drawNowPlaying/drawPcStats
+      tft.pushImage(ZONE_STATUS_X_START, ZONE_STATUS_Y_START,
+                    SPRITE_STATUS_WIDTH, SPRITE_STATUS_HEIGHT, SPRITE_STATUS);
       break;
-    case ZONE_CONTENT:
-      x_start = ZONE_CONTENT_X_START;
-      x_end = ZONE_CONTENT_X_END;
-      y_start = ZONE_CONTENT_Y_START;
-      y_end = ZONE_CONTENT_Y_END;
+    case ZONE_CONTENT1:
+      tft.pushImage(ZONE_CONTENT1_X_START, ZONE_CONTENT1_Y_START,
+                    SPRITE_CONTENT1_WIDTH, SPRITE_CONTENT1_HEIGHT, SPRITE_CONTENT1);
+      break;
+    case ZONE_CONTENT2:
+      tft.pushImage(ZONE_CONTENT2_X_START, ZONE_CONTENT2_Y_START,
+                    SPRITE_CONTENT2_WIDTH, SPRITE_CONTENT2_HEIGHT, SPRITE_CONTENT2);
+      break;
+    case ZONE_CONTENT3:
+      tft.pushImage(ZONE_CONTENT3_X_START, ZONE_CONTENT3_Y_START,
+                    SPRITE_CONTENT3_WIDTH, SPRITE_CONTENT3_HEIGHT, SPRITE_CONTENT3);
       break;
     default:
       return;
   }
 
-  tft.fillRect(x_start, y_start, x_end - x_start + 1, y_end - y_start + 1, COLOR_BACKGROUND);
-
 #if DEBUG_SHOW_ZONES
-  tft.drawRect(x_start, y_start, x_end - x_start + 1, y_end - y_start + 1, TFT_WHITE);
-
-  // Draw internal slot lines if clearing content zone
-  if (zone == ZONE_CONTENT) {
-    // Slot separators at 109 and 174
-    tft.drawFastHLine(x_start, ZONE_NOTIF1_Y_END, x_end - x_start + 1, TFT_WHITE);
-    tft.drawFastHLine(x_start, ZONE_NOTIF2_Y_END, x_end - x_start + 1, TFT_WHITE);
+  // Draw debug borders on top
+  int x_start, x_end, y_start, y_end;
+  switch (zone) {
+    case ZONE_TITLE:
+      x_start = ZONE_TITLE_X_START; x_end = ZONE_TITLE_X_END;
+      y_start = ZONE_TITLE_Y_START; y_end = ZONE_TITLE_Y_END;
+      break;
+    case ZONE_CLOCK:
+      x_start = ZONE_CLOCK_X_START; x_end = ZONE_CLOCK_X_END;
+      y_start = ZONE_CLOCK_Y_START; y_end = ZONE_CLOCK_Y_END;
+      break;
+    case ZONE_STATUS:
+      x_start = ZONE_STATUS_X_START; x_end = ZONE_STATUS_X_END;
+      y_start = ZONE_STATUS_Y_START; y_end = ZONE_STATUS_Y_END;
+      break;
+    case ZONE_CONTENT1:
+      x_start = ZONE_CONTENT1_X_START; x_end = ZONE_CONTENT1_X_END;
+      y_start = ZONE_CONTENT1_Y_START; y_end = ZONE_CONTENT1_Y_END;
+      break;
+    case ZONE_CONTENT2:
+      x_start = ZONE_CONTENT2_X_START; x_end = ZONE_CONTENT2_X_END;
+      y_start = ZONE_CONTENT2_Y_START; y_end = ZONE_CONTENT2_Y_END;
+      break;
+    case ZONE_CONTENT3:
+      x_start = ZONE_CONTENT3_X_START; x_end = ZONE_CONTENT3_X_END;
+      y_start = ZONE_CONTENT3_Y_START; y_end = ZONE_CONTENT3_Y_END;
+      break;
+    default:
+      return;
   }
+  tft.drawRect(x_start, y_start, x_end - x_start + 1, y_end - y_start + 1, TFT_WHITE);
 #endif
 }
 
 // ==================== Title Zone ====================
+static TFT_eSprite titleSprite = TFT_eSprite(&tft);
+static bool titleSpriteCreated = false;
+
 void drawTitle() {
-  tft.setTextSize(1);
-  tft.setFreeFont(&MDIOTrial_Bold8pt7b);  // Bold font for header
-  tft.setTextColor(COLOR_HEADER);
+  // Create sprite once
+  if (!titleSpriteCreated) {
+    titleSprite.createSprite(SPRITE_TITLE_WIDTH, SPRITE_TITLE_HEIGHT);
+    titleSprite.setFreeFont(&MDIOTrial_Bold8pt7b);
+    titleSpriteCreated = true;
+  }
 
+  // Draw pixel art background from PROGMEM
+  titleSprite.pushImage(0, 0, SPRITE_TITLE_WIDTH, SPRITE_TITLE_HEIGHT, SPRITE_TITLE);
+
+  // Overlay text
+  titleSprite.setTextSize(1);
+  titleSprite.setTextColor(COLOR_HEADER);
   const char* title = (currentScreen == SCREEN_NOTIFS) ? "NOTIFS" : "REMINDER";
-  // Draw title within title zone (2-120 x 2-24)
-  tft.drawString(title, ZONE_TITLE_X_START + 5, ZONE_TITLE_Y_START + 5);
+  titleSprite.drawString(title, 5, 5);
 
-  tft.setFreeFont(&MDIOTrial_Regular8pt7b);  // Reset to regular font
+  // Push to screen
+  titleSprite.pushSprite(ZONE_TITLE_X_START, ZONE_TITLE_Y_START);
 }
 
 // ==================== Clock Zone ====================
+static TFT_eSprite clockSprite = TFT_eSprite(&tft);
+static bool clockSpriteCreated = false;
+static char previousTimeStr[25] = "";
+
 static void resetPreviousTimeStr() {
   memset(previousTimeStr, 0, sizeof(previousTimeStr));
 }
@@ -136,26 +171,29 @@ void updateClock() {
   char timeStr[25];
   strftime(timeStr, sizeof(timeStr), "%a,%d-%b,%H:%M:%S", &timeinfo);
 
-  tft.setTextSize(1);
-  tft.setTextColor(COLOR_CLOCK);
-
-  // Clock zone: 141-319 x 0-24 (text position unchanged)
-  int x = ZONE_CLOCK_X_START + 7;
-  int y = ZONE_CLOCK_Y_START + 5;
-  int charHeight = tft.fontHeight();
-  int maxCharWidth = tft.textWidth("W");
-  int cursorX = x;
-
-  // Partial update - only redraw changed characters
-  for (size_t i = 0; i < strlen(timeStr); i++) {
-    if (timeStr[i] != previousTimeStr[i] || previousTimeStr[i] == '\0') {
-      tft.fillRect(cursorX, y, maxCharWidth, charHeight, COLOR_BACKGROUND);
-      char ch[2] = {timeStr[i], '\0'};
-      tft.drawString(ch, cursorX, y);
-    }
-    previousTimeStr[i] = timeStr[i];
-    cursorX += maxCharWidth;
+  // Skip if nothing changed
+  if (strcmp(timeStr, previousTimeStr) == 0) {
+    return;
   }
+  strcpy(previousTimeStr, timeStr);
+
+  // Create sprite once
+  if (!clockSpriteCreated) {
+    clockSprite.createSprite(SPRITE_CLOCK_WIDTH, SPRITE_CLOCK_HEIGHT);
+    clockSprite.setFreeFont(&MDIOTrial_Regular8pt7b);
+    clockSpriteCreated = true;
+  }
+
+  // Draw pixel art background from PROGMEM
+  clockSprite.pushImage(0, 0, SPRITE_CLOCK_WIDTH, SPRITE_CLOCK_HEIGHT, SPRITE_CLOCK);
+
+  // Overlay text
+  clockSprite.setTextSize(1);
+  clockSprite.setTextColor(COLOR_CLOCK);
+  clockSprite.drawString(timeStr, 7, 5);
+
+  // Push to screen
+  clockSprite.pushSprite(ZONE_CLOCK_X_START, ZONE_CLOCK_Y_START);
 }
 // ==================== Status Zone (Now Playing / PC Stats) ====================
 // Sprites for flicker-free rendering - dimensions calculated from zone boundaries
@@ -194,8 +232,8 @@ void drawPcStats() {
     npSpriteCreated = true;
   }
 
-  // Clear sprite
-  npSprite.fillSprite(COLOR_BACKGROUND);
+  // Draw pixel art background from PROGMEM
+  npSprite.pushImage(0, 0, SPRITE_STATUS_WIDTH, SPRITE_STATUS_HEIGHT, SPRITE_STATUS);
   npSprite.setTextSize(1);
 
   int x = 5;
@@ -353,8 +391,8 @@ void drawNowPlaying() {
     npSpriteCreated = true;
   }
 
-  // Render everything to sprite first
-  npSprite.fillSprite(COLOR_BACKGROUND);
+  // Render pixel art background from PROGMEM
+  npSprite.pushImage(0, 0, SPRITE_STATUS_WIDTH, SPRITE_STATUS_HEIGHT, SPRITE_STATUS);
 
   // Draw disc icon to sprite - always spinning, color depends on state
   // Center disc in left portion of sprite (roughly 11px from left, centered vertically)
@@ -384,7 +422,7 @@ void drawNowPlaying() {
   int t2y3 = cy + (int)(6 * sin(angle2 + 0.4));
   npSprite.fillTriangle(t2x1, t2y1, t2x2, t2y2, t2x3, t2y3, discColor);
 
-  // Draw scrolling text if active (to separate clipped sprite)
+  // Draw scrolling text if active (directly to npSprite with clipping)
   if (nowPlayingActive && nowPlayingSong.length() > 0) {
 
     String fullText = nowPlayingSong;
@@ -393,27 +431,27 @@ void drawNowPlaying() {
     }
     fullText += "    ";  // Gap before repeat
 
-    // Clear text sprite
-    textSprite.fillSprite(COLOR_BACKGROUND);
-
     // Calculate text width in pixels
-    int textWidth = textSprite.textWidth(fullText);
+    int textWidth = npSprite.textWidth(fullText);
 
     // Wrap scroll position when we've scrolled past the full text
     int scrollPixel = nowPlayingScrollPixel % textWidth;
 
-    // Draw text at offset within text sprite (starting at X=0 in sprite coords)
+    // Set viewport to clip text to the text zone (after disc icon)
+    npSprite.setViewport(textZoneX, 0, textZoneW, zoneH);
+
+    // Draw text at offset (coordinates are now relative to viewport)
     int textX = -scrollPixel;
-    textSprite.setTextColor(TFT_MAGENTA);
-    textSprite.drawString(fullText, textX, 3);
+    npSprite.setTextColor(TFT_MAGENTA);
+    npSprite.drawString(fullText, textX, 3);
 
     // Draw second copy for seamless wrap
     if (textX + textWidth < textZoneW) {
-      textSprite.drawString(fullText, textX + textWidth, 3);
+      npSprite.drawString(fullText, textX + textWidth, 3);
     }
 
-    // Push text sprite to main sprite at correct position
-    textSprite.pushToSprite(&npSprite, textZoneX, 0);
+    // Reset viewport to full sprite
+    npSprite.resetViewport();
   }
 
 #if DEBUG_SHOW_ZONES
@@ -477,14 +515,24 @@ void refreshScreen() {
     clearZoneDirty(ZONE_STATUS);
   }
 
-  // Content zone
-  if (isZoneDirty(ZONE_CONTENT)) {
-    clearZone(ZONE_CONTENT);
+  // Content zones (check all 3)
+  bool anyContentDirty = isZoneDirty(ZONE_CONTENT1) || isZoneDirty(ZONE_CONTENT2) || isZoneDirty(ZONE_CONTENT3);
+  if (anyContentDirty) {
+    // Clear all dirty content zones
+    if (isZoneDirty(ZONE_CONTENT1)) clearZone(ZONE_CONTENT1);
+    if (isZoneDirty(ZONE_CONTENT2)) clearZone(ZONE_CONTENT2);
+    if (isZoneDirty(ZONE_CONTENT3)) clearZone(ZONE_CONTENT3);
+    
+    // Draw content
     if (currentScreen == SCREEN_NOTIFS) {
       drawNotifContent();
     } else {
       drawReminderContent();
     }
-    clearZoneDirty(ZONE_CONTENT);
+    
+    // Clear all dirty flags
+    clearZoneDirty(ZONE_CONTENT1);
+    clearZoneDirty(ZONE_CONTENT2);
+    clearZoneDirty(ZONE_CONTENT3);
   }
 }

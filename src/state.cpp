@@ -2,7 +2,7 @@
 
 // ==================== Screen State ====================
 Screen currentScreen = SCREEN_NOTIFS;
-bool zoneDirty[ZONE_COUNT] = {true, true, true, true};
+bool zoneDirty[ZONE_COUNT] = {true, true, true, true, true, true};
 
 // ==================== Timing ====================
 unsigned long lastClockUpdate = 0;
@@ -71,6 +71,12 @@ void setAllZonesDirty() {
   for (int i = 0; i < ZONE_COUNT; i++) {
     zoneDirty[i] = true;
   }
+}
+
+void setAllContentDirty() {
+  zoneDirty[ZONE_CONTENT1] = true;
+  zoneDirty[ZONE_CONTENT2] = true;
+  zoneDirty[ZONE_CONTENT3] = true;
 }
 
 void clearZoneDirty(Zone zone) {
