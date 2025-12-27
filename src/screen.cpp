@@ -440,9 +440,10 @@ void drawNowPlaying() {
   prepareZoneSprite(npSprite, SPRITE_STATUS, SPRITE_STATUS_WIDTH, SPRITE_STATUS_HEIGHT);
 
   // Draw disc icon to sprite - always spinning, color depends on state
-  int cx = STATUS_DISC_CX;
+  // When idle, disc travels across the zone; when playing, stays at fixed position
+  int cx = nowPlayingActive ? STATUS_DISC_CX : idleDiscX;
   int cy = zoneH / 2;  // Center vertically in zone
-  uint16_t discColor = nowPlayingActive ? TFT_WHITE : 0x2104;  // Very dark gray when idle
+  uint16_t discColor = TFT_WHITE;  // Always white - movement indicates state
 
   npSprite.drawCircle(cx, cy, STATUS_DISC_RADIUS, discColor);
   npSprite.fillCircle(cx, cy, STATUS_DISC_INNER, discColor);
@@ -511,14 +512,50 @@ void updateNowPlayingTicker() {
   unsigned long now = millis();
 
   // Always update disc animation (spinning even when not playing)
+  // Now playing: CCW to match right-to-left text scroll
+  // Idle: rotation matches movement direction
   if (now - lastDiscUpdate >= NOW_PLAYING_DISC_SPEED) {
-    discFrame = (discFrame + 1) % 64;  // 64 frames for ultra-smooth animation
+    if (nowPlayingActive) {
+      // Playing music: rotate counter-clockwise (matches text scroll)
+      discFrame = (discFrame - 1 + 64) % 64;
+    } else if (idleDiscDirection > 0) {
+      // Rolling right: rotate clockwise
+      discFrame = (discFrame + 1) % 64;
+    } else {
+      // Rolling left: rotate counter-clockwise
+      discFrame = (discFrame - 1 + 64) % 64;
+    }
     lastDiscUpdate = now;
     setZoneDirty(ZONE_STATUS);  // Always redraw when disc frame changes
   }
 
-  // If not active, we still need to redraw for disc animation
-  if (!nowPlayingActive || nowPlayingSong.length() == 0) {
+  // If not active, update idle disc horizontal position (bouncing)
+  if (!nowPlayingActive) {
+    if (now - lastIdleDiscMove >= IDLE_DISC_TRAVEL_SPEED) {
+      // Move disc position
+      idleDiscX += idleDiscDirection;
+      
+      // Calculate bounce boundaries (disc radius from edges)
+      const int minX = STATUS_DISC_RADIUS + 2;  // Left edge with margin
+      const int maxX = STATUS_ZONE_W - STATUS_DISC_RADIUS - 2;  // Right edge with margin
+      
+      // Bounce at edges
+      if (idleDiscX >= maxX) {
+        idleDiscX = maxX;
+        idleDiscDirection = -1;  // Reverse to left
+      } else if (idleDiscX <= minX) {
+        idleDiscX = minX;
+        idleDiscDirection = 1;   // Reverse to right
+      }
+      
+      lastIdleDiscMove = now;
+      setZoneDirty(ZONE_STATUS);
+    }
+    return;
+  }
+
+  // Skip scrolling if no song content
+  if (nowPlayingSong.length() == 0) {
     return;
   }
 

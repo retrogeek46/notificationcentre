@@ -23,6 +23,9 @@ int nowPlayingScrollPixel = 0;
 unsigned long lastScrollUpdate = 0;
 int discFrame = 0;
 unsigned long lastDiscUpdate = 0;
+int idleDiscX = 11;              // Start at center left
+int idleDiscDirection = 1;       // Start moving right
+unsigned long lastIdleDiscMove = 0;
 bool nowPlayingActive = false;
 
 // ==================== PC Stats (Gaming Mode) ====================
@@ -57,6 +60,9 @@ void initState() {
   lastScrollUpdate = 0;
   discFrame = 0;
   lastDiscUpdate = 0;
+  idleDiscX = 11;
+  idleDiscDirection = 1;
+  lastIdleDiscMove = 0;
   nowPlayingActive = false;
   nextReminderId = 1;
 }

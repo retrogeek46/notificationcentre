@@ -59,6 +59,7 @@
 #define NOW_PLAYING_SCROLL_SPEED 50    // ms between scroll steps (20 FPS)
 #define NOW_PLAYING_SCROLL_STEP 1      // pixels to scroll per step
 #define NOW_PLAYING_DISC_SPEED 50      // ms between disc rotation frames (64 frames)
+#define IDLE_DISC_TRAVEL_SPEED 50      // ms between horizontal movement steps (idle mode)
 #define NOW_PLAYING_TEXT_X 22          // Text start X (after disc icon)
 #define NOW_PLAYING_TEXT_WIDTH 298     // Available width for text (320 - 22)
 

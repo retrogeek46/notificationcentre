@@ -26,6 +26,9 @@ extern int nowPlayingScrollPixel;      // Current scroll pixel offset
 extern unsigned long lastScrollUpdate; // Last scroll tick
 extern int discFrame;                  // Current disc animation frame (0-3)
 extern unsigned long lastDiscUpdate;   // Last disc animation tick
+extern int idleDiscX;                  // Idle disc X position for traveling
+extern int idleDiscDirection;          // 1 = right, -1 = left
+extern unsigned long lastIdleDiscMove; // Last idle disc position update
 extern bool nowPlayingActive;          // Is music currently playing?
 
 // ==================== PC Stats (Gaming Mode) ====================
