@@ -5,7 +5,9 @@
 #include "reminder_screen.h"
 #include "icons/icons.h"
 #include "fonts/MDIOTrial_Regular8pt7b.h"
+#include "fonts/MDIOTrial_Regular9pt7b.h"
 #include "fonts/MDIOTrial_Bold8pt7b.h"
+#include "fonts/MDIOTrial_Bold9pt7b.h"
 #include "sprites/sprite_title.h"
 #include "sprites/sprite_clock.h"
 #include "sprites/sprite_status.h"
@@ -138,7 +140,7 @@ void drawTitle() {
   // Create sprite once
   if (!titleSpriteCreated) {
     titleSprite.createSprite(SPRITE_TITLE_WIDTH, SPRITE_TITLE_HEIGHT);
-    titleSprite.setFreeFont(&MDIOTrial_Bold8pt7b);
+    titleSprite.setFreeFont(&MDIOTrial_Bold9pt7b);
     titleSpriteCreated = true;
   }
 
@@ -180,7 +182,7 @@ void updateClock() {
   // Create sprite once
   if (!clockSpriteCreated) {
     clockSprite.createSprite(SPRITE_CLOCK_WIDTH, SPRITE_CLOCK_HEIGHT);
-    clockSprite.setFreeFont(&MDIOTrial_Regular8pt7b);
+    clockSprite.setFreeFont(&MDIOTrial_Regular9pt7b);
     clockSpriteCreated = true;
   }
 
@@ -226,9 +228,9 @@ void drawPcStats() {
   // Create sprite if needed
   if (!npSpriteCreated) {
     npSprite.createSprite(zoneW, zoneH);
-    npSprite.setFreeFont(&MDIOTrial_Regular8pt7b);
+    npSprite.setFreeFont(&MDIOTrial_Regular9pt7b);
     textSprite.createSprite(zoneW - 22, zoneH);  // Text area after disc icon
-    textSprite.setFreeFont(&MDIOTrial_Regular8pt7b);
+    textSprite.setFreeFont(&MDIOTrial_Regular9pt7b);
     npSpriteCreated = true;
   }
 
@@ -266,35 +268,12 @@ void drawPcStats() {
   npSprite.drawString(cpuRestStr, x, y);
   x += npSprite.textWidth(cpuRestStr);
 
-  // Separator (no space after GHz)
+  // Separator after CPU
   npSprite.setTextColor(COLOR_SEP);
-  npSprite.drawString("| ", x, y);
-  x += npSprite.textWidth("| ");
+  npSprite.drawString("|", x, y);
+  x += npSprite.textWidth("|");
 
-  // GPU stats - only flash temp red, keep usage magenta
-  bool gpuOverheat = (pcGpuTemp > GPU_TEMP_WARN);
-
-  // Draw GPU temp (flashing if overheating)
-  uint16_t gpuTempColor = (gpuOverheat && flashOn) ? TFT_RED : COLOR_GPU;
-  npSprite.setTextColor(gpuTempColor);
-  char gpuTempStr[8];
-  snprintf(gpuTempStr, sizeof(gpuTempStr), "%dc ", pcGpuTemp);
-  npSprite.drawString(gpuTempStr, x, y);
-  x += npSprite.textWidth(gpuTempStr);
-
-  // Draw GPU usage (always magenta)
-  npSprite.setTextColor(COLOR_GPU);
-  char gpuUsageStr[8];
-  snprintf(gpuUsageStr, sizeof(gpuUsageStr), " %d%%", pcGpuUsage);
-  npSprite.drawString(gpuUsageStr, x, y);
-  x += npSprite.textWidth(gpuUsageStr);
-
-  // Separator (no space around RAM)
-  npSprite.setTextColor(COLOR_SEP);
-  npSprite.drawString("| ", x, y);
-  x += npSprite.textWidth("| ");
-
-  // RAM as pie chart
+  // RAM as pie chart (moved before GPU)
   int ramCx = x + 7;
   int ramCy = zoneH / 2;
   int ramRadius = 6;
@@ -314,31 +293,48 @@ void drawPcStats() {
   }
   x += 16;  // Pie chart width
 
-  // Separator (no space around RAM)
+  // Separator after RAM
   npSprite.setTextColor(COLOR_SEP);
   npSprite.drawString("|", x, y);
   x += npSprite.textWidth("|");
 
-  // Network: Download (green), Upload (cyan) - no arrows
-  // Download speed in green
+  // GPU stats - only flash temp red, keep usage magenta
+  bool gpuOverheat = (pcGpuTemp > GPU_TEMP_WARN);
+
+  // Draw GPU temp (flashing if overheating)
+  uint16_t gpuTempColor = (gpuOverheat && flashOn) ? TFT_RED : COLOR_GPU;
+  npSprite.setTextColor(gpuTempColor);
+  char gpuTempStr[8];
+  snprintf(gpuTempStr, sizeof(gpuTempStr), "%dc ", pcGpuTemp);
+  npSprite.drawString(gpuTempStr, x, y);
+  x += npSprite.textWidth(gpuTempStr);
+
+  // Draw GPU usage (always magenta)
+  npSprite.setTextColor(COLOR_GPU);
+  char gpuUsageStr[8];
+  snprintf(gpuUsageStr, sizeof(gpuUsageStr), "%d%%", pcGpuUsage);
+  npSprite.drawString(gpuUsageStr, x, y);
+  x += npSprite.textWidth(gpuUsageStr);
+
+  // Separator after GPU
+  npSprite.setTextColor(COLOR_SEP);
+  npSprite.drawString("|", x, y);
+  x += npSprite.textWidth("|");
+
+  // Network: Download (green), Upload (cyan) with M suffix
   npSprite.setTextColor(COLOR_NET);
   char downStr[8];
-  if (pcNetDown >= 100) {
-    snprintf(downStr, sizeof(downStr), "%.0fM", pcNetDown);
-  } else if (pcNetDown >= 10) {
+  if (pcNetDown >= 10) {
     snprintf(downStr, sizeof(downStr), "%.0fM", pcNetDown);
   } else {
     snprintf(downStr, sizeof(downStr), "%.1fM", pcNetDown);
   }
   npSprite.drawString(downStr, x, y);
-  x += npSprite.textWidth(downStr) + 2;
+  x += npSprite.textWidth(downStr);
 
-  // Upload speed in cyan
   npSprite.setTextColor(TFT_CYAN);
   char upStr[8];
-  if (pcNetUp >= 100) {
-    snprintf(upStr, sizeof(upStr), "%.0fM", pcNetUp);
-  } else if (pcNetUp >= 10) {
+  if (pcNetUp >= 10) {
     snprintf(upStr, sizeof(upStr), "%.0fM", pcNetUp);
   } else {
     snprintf(upStr, sizeof(upStr), "%.1fM", pcNetUp);
@@ -385,9 +381,9 @@ void drawNowPlaying() {
   // Create sprites once
   if (!npSpriteCreated) {
     npSprite.createSprite(zoneW, zoneH);
-    npSprite.setFreeFont(&MDIOTrial_Regular8pt7b);
+    npSprite.setFreeFont(&MDIOTrial_Regular9pt7b);
     textSprite.createSprite(textZoneW, zoneH);
-    textSprite.setFreeFont(&MDIOTrial_Regular8pt7b);
+    textSprite.setFreeFont(&MDIOTrial_Regular9pt7b);
     npSpriteCreated = true;
   }
 

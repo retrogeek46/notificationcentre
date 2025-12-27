@@ -29,11 +29,11 @@ const int ZONE_CLOCK_X_END = 319;
 const int ZONE_CLOCK_Y_START = 0;
 const int ZONE_CLOCK_Y_END = 24;
 
-// Status zone: 0-319 x 25-44
+// Status zone: 0-319 x 23-42
 const int ZONE_STATUS_X_START = 0;
 const int ZONE_STATUS_X_END = 319;
-const int ZONE_STATUS_Y_START = 25;
-const int ZONE_STATUS_Y_END = 44;
+const int ZONE_STATUS_Y_START = 23;
+const int ZONE_STATUS_Y_END = 42;
 
 // Content zones (3 slots of 65px each)
 // Content1: 0-319 x 45-109
