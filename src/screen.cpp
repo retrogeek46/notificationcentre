@@ -151,6 +151,15 @@ void prepareZoneSprite(TFT_eSprite& sprite, const uint16_t* bgSprite, int bgW, i
 #endif
 }
 
+// ==================== Layout Constants ====================
+// Title zone text position
+static const int TITLE_TEXT_X = 5;
+static const int TITLE_TEXT_Y = 5;
+
+// Clock zone text position
+static const int CLOCK_TEXT_X = 5;
+static const int CLOCK_TEXT_Y = 5;
+
 // ==================== Title Zone ====================
 static TFT_eSprite titleSprite = TFT_eSprite(&tft);
 static bool titleSpriteCreated = false;
@@ -172,7 +181,7 @@ void drawTitle() {
   titleSprite.setTextSize(1);
   titleSprite.setTextColor(COLOR_HEADER);
   const char* title = (currentScreen == SCREEN_NOTIFS) ? "NOTIFS" : "REMINDER";
-  titleSprite.drawString(title, 5, 5);
+  titleSprite.drawString(title, TITLE_TEXT_X, TITLE_TEXT_Y);
 
   // Push to screen
   titleSprite.pushSprite(ZONE_TITLE_X_START, ZONE_TITLE_Y_START);
@@ -221,7 +230,7 @@ void updateClock() {
   // Overlay text
   clockSprite.setTextSize(1);
   clockSprite.setTextColor(COLOR_CLOCK);
-  clockSprite.drawString(timeStr, 5, 5);
+  clockSprite.drawString(timeStr, CLOCK_TEXT_X, CLOCK_TEXT_Y);
 
   // Push to screen
   clockSprite.pushSprite(ZONE_CLOCK_X_START, ZONE_CLOCK_Y_START);
@@ -236,18 +245,21 @@ void updateClock() {
 // Sprites for flicker-free rendering - dimensions calculated from zone boundaries
 static const int STATUS_ZONE_W = ZONE_STATUS_X_END - ZONE_STATUS_X_START + 1;  // 320
 static const int STATUS_ZONE_H = ZONE_STATUS_Y_END - ZONE_STATUS_Y_START + 1;  // 20
-static const int STATUS_TEXT_Y = 2;  // Common text y-position for status zone
+
+// Status zone layout constants
+static const int STATUS_TEXT_X = 5;    // Text starting x-position
+static const int STATUS_TEXT_Y = 2;    // Common text y-position
+static const int STATUS_RAM_OFFSET = 7;  // RAM pie chart x-offset from current position
+static const int STATUS_RAM_RADIUS = 6;  // RAM pie chart radius
+static const int STATUS_RAM_WIDTH = 16;  // Total width reserved for RAM pie chart
+static const int STATUS_DISC_CX = 11;    // Disc icon center x
+static const int STATUS_DISC_RADIUS = 7; // Disc icon outer radius
+static const int STATUS_DISC_INNER = 2;  // Disc icon inner circle radius
+
 static TFT_eSprite npSprite = TFT_eSprite(&tft);       // Full status zone
 static TFT_eSprite textSprite = TFT_eSprite(&tft);     // Text-only zone
 static bool npSpriteCreated = false;
 static bool npZoneCleared = false;  // One-time zone clear
-
-// Color definitions for PC stats - bright vibrant colors
-#define COLOR_CPU    0xFBE0   // Bright orange
-#define COLOR_GPU    0xFC1F   // Hot pink/magenta
-#define COLOR_RAM    0xFFE0   // Bright yellow
-#define COLOR_NET    0x07E0   // Bright green
-#define COLOR_SEP    0x6B6D   // Medium gray for separators
 
 void drawPcStats() {
   const int zoneX = ZONE_STATUS_X_START;
@@ -274,7 +286,7 @@ void drawPcStats() {
   prepareZoneSprite(npSprite, SPRITE_STATUS, SPRITE_STATUS_WIDTH, SPRITE_STATUS_HEIGHT);
   npSprite.setTextSize(1);
 
-  int x = 5;
+  int x = STATUS_TEXT_X;
   int y = STATUS_TEXT_Y;
 
   bool flashOn = (millis() / 300) % 2 == 0;
@@ -310,9 +322,9 @@ void drawPcStats() {
   x += npSprite.textWidth("| ");
 
   // RAM as pie chart (moved before GPU)
-  int ramCx = x + 7;
-  int ramCy = zoneH / 2 - 1;  // Move up 2px to align with text
-  int ramRadius = 6;
+  int ramCx = x + STATUS_RAM_OFFSET;
+  int ramCy = zoneH / 2 - 1;  // Move up 1px to align with text
+  int ramRadius = STATUS_RAM_RADIUS;
   float ramPercent = (pcRamTotal > 0) ? (float)pcRamUsed / pcRamTotal : 0;
   int ramAngle = (int)(ramPercent * 360);
 
@@ -327,12 +339,12 @@ void drawPcStats() {
       npSprite.drawLine(ramCx, ramCy, px, py, COLOR_RAM);
     }
   }
-  x += 16;  // Pie chart width
+  x += STATUS_RAM_WIDTH;  // Pie chart width
 
   // Separator after RAM
   npSprite.setTextColor(COLOR_SEP);
-  npSprite.drawString("|", x, y);
-  x += npSprite.textWidth("|");
+  npSprite.drawString("| ", x, y);
+  x += npSprite.textWidth("| ");
 
   // GPU stats - only flash temp red, keep usage magenta
   bool gpuOverheat = (pcGpuTemp > GPU_TEMP_WARN);
@@ -428,13 +440,12 @@ void drawNowPlaying() {
   prepareZoneSprite(npSprite, SPRITE_STATUS, SPRITE_STATUS_WIDTH, SPRITE_STATUS_HEIGHT);
 
   // Draw disc icon to sprite - always spinning, color depends on state
-  // Center disc in left portion of sprite (roughly 11px from left, centered vertically)
-  int cx = 11;
+  int cx = STATUS_DISC_CX;
   int cy = zoneH / 2;  // Center vertically in zone
   uint16_t discColor = nowPlayingActive ? TFT_WHITE : 0x2104;  // Very dark gray when idle
 
-  npSprite.drawCircle(cx, cy, 7, discColor);
-  npSprite.fillCircle(cx, cy, 2, discColor);
+  npSprite.drawCircle(cx, cy, STATUS_DISC_RADIUS, discColor);
+  npSprite.fillCircle(cx, cy, STATUS_DISC_INNER, discColor);
 
   // Always draw spinning triangles (using current discFrame)
   float angle = (discFrame * 5.625) * PI / 180.0;
@@ -475,7 +486,7 @@ void drawNowPlaying() {
 
     // Draw text at offset (coordinates are now relative to viewport)
     int textX = -scrollPixel;
-    npSprite.setTextColor(TFT_MAGENTA);
+    npSprite.setTextColor(COLOR_NOW_PLAYING);
     npSprite.drawString(fullText, textX, STATUS_TEXT_Y);
 
     // Draw second copy for seamless wrap

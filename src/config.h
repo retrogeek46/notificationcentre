@@ -78,6 +78,16 @@
 #define COLOR_SUCCESS TFT_GREEN
 #define COLOR_ERROR TFT_RED
 
+// PC Stats colors (matching scrolling text color)
+#define COLOR_CPU    TFT_MAGENTA
+#define COLOR_GPU    TFT_MAGENTA
+#define COLOR_RAM    TFT_MAGENTA
+#define COLOR_NET    TFT_MAGENTA
+#define COLOR_SEP    TFT_LIGHTGREY
+
+// Now Playing color
+#define COLOR_NOW_PLAYING TFT_MAGENTA
+
 // Notification colors
 #define COLOR_NOTIF_MSG TFT_LIGHTGREY
 
@@ -89,9 +99,9 @@
 #define COLOR_REMINDER_DUE TFT_LIGHTGREY
 
 // Priority colors
-#define COLOR_PRIORITY_HIGH TFT_RED
-#define COLOR_PRIORITY_MEDIUM TFT_YELLOW
-#define COLOR_PRIORITY_NORMAL TFT_WHITE
+#define COLOR_PRIORITY_HIGH 0xFC1F      // Magenta
+#define COLOR_PRIORITY_MEDIUM 0xFD20    // Orange
+#define COLOR_PRIORITY_NORMAL TFT_LIGHTGREY
 
 // App icon colors
 #define COLOR_WHATSAPP TFT_GREEN
