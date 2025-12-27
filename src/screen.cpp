@@ -221,7 +221,7 @@ void updateClock() {
   // Overlay text
   clockSprite.setTextSize(1);
   clockSprite.setTextColor(COLOR_CLOCK);
-  clockSprite.drawString(timeStr, 8, 5);
+  clockSprite.drawString(timeStr, 5, 5);
 
   // Push to screen
   clockSprite.pushSprite(ZONE_CLOCK_X_START, ZONE_CLOCK_Y_START);
@@ -234,8 +234,9 @@ void updateClock() {
 }
 // ==================== Status Zone (Now Playing / PC Stats) ====================
 // Sprites for flicker-free rendering - dimensions calculated from zone boundaries
-static const int STATUS_ZONE_W = ZONE_STATUS_X_END - ZONE_STATUS_X_START + 1;  // 317
+static const int STATUS_ZONE_W = ZONE_STATUS_X_END - ZONE_STATUS_X_START + 1;  // 320
 static const int STATUS_ZONE_H = ZONE_STATUS_Y_END - ZONE_STATUS_Y_START + 1;  // 20
+static const int STATUS_TEXT_Y = 2;  // Common text y-position for status zone
 static TFT_eSprite npSprite = TFT_eSprite(&tft);       // Full status zone
 static TFT_eSprite textSprite = TFT_eSprite(&tft);     // Text-only zone
 static bool npSpriteCreated = false;
@@ -274,7 +275,7 @@ void drawPcStats() {
   npSprite.setTextSize(1);
 
   int x = 5;
-  int y = 2;
+  int y = STATUS_TEXT_Y;
 
   bool flashOn = (millis() / 300) % 2 == 0;
 
@@ -475,11 +476,11 @@ void drawNowPlaying() {
     // Draw text at offset (coordinates are now relative to viewport)
     int textX = -scrollPixel;
     npSprite.setTextColor(TFT_MAGENTA);
-    npSprite.drawString(fullText, textX, 1);
+    npSprite.drawString(fullText, textX, STATUS_TEXT_Y);
 
     // Draw second copy for seamless wrap
     if (textX + textWidth < textZoneW) {
-      npSprite.drawString(fullText, textX + textWidth, 1);
+      npSprite.drawString(fullText, textX + textWidth, STATUS_TEXT_Y);
     }
 
     // Reset viewport to full sprite
