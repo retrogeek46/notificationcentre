@@ -8,6 +8,7 @@
 #include "fonts/MDIOTrial_Regular9pt7b.h"
 #include "fonts/MDIOTrial_Bold8pt7b.h"
 #include "fonts/MDIOTrial_Bold9pt7b.h"
+#include "fonts/MDIOTrial_Bold10pt7b.h"
 #include "sprites/sprite_title.h"
 #include "sprites/sprite_clock.h"
 #include "sprites/sprite_status.h"
@@ -65,41 +66,9 @@ void drawDebugZones() {
 
 // ==================== Zone Helpers ====================
 void clearZone(Zone zone) {
-  switch (zone) {
-    case ZONE_TITLE:
-      // Title sprite is drawn by drawTitle() - just mark dirty
-      tft.pushImage(ZONE_TITLE_X_START, ZONE_TITLE_Y_START,
-                    SPRITE_TITLE_WIDTH, SPRITE_TITLE_HEIGHT, SPRITE_TITLE);
-      break;
-    case ZONE_CLOCK:
-      // Clock sprite is drawn by updateClock() - just mark dirty
-      tft.pushImage(ZONE_CLOCK_X_START, ZONE_CLOCK_Y_START,
-                    SPRITE_CLOCK_WIDTH, SPRITE_CLOCK_HEIGHT, SPRITE_CLOCK);
-      break;
-    case ZONE_STATUS:
-      // Status sprite is drawn by drawNowPlaying/drawPcStats
-      tft.pushImage(ZONE_STATUS_X_START, ZONE_STATUS_Y_START,
-                    SPRITE_STATUS_WIDTH, SPRITE_STATUS_HEIGHT, SPRITE_STATUS);
-      break;
-    case ZONE_CONTENT1:
-      tft.pushImage(ZONE_CONTENT1_X_START, ZONE_CONTENT1_Y_START,
-                    SPRITE_CONTENT1_WIDTH, SPRITE_CONTENT1_HEIGHT, SPRITE_CONTENT1);
-      break;
-    case ZONE_CONTENT2:
-      tft.pushImage(ZONE_CONTENT2_X_START, ZONE_CONTENT2_Y_START,
-                    SPRITE_CONTENT2_WIDTH, SPRITE_CONTENT2_HEIGHT, SPRITE_CONTENT2);
-      break;
-    case ZONE_CONTENT3:
-      tft.pushImage(ZONE_CONTENT3_X_START, ZONE_CONTENT3_Y_START,
-                    SPRITE_CONTENT3_WIDTH, SPRITE_CONTENT3_HEIGHT, SPRITE_CONTENT3);
-      break;
-    default:
-      return;
-  }
+  int x_start, y_start, x_end, y_end;
 
-#if DEBUG_SHOW_ZONES
-  // Draw debug borders on top
-  int x_start, x_end, y_start, y_end;
+  // Get zone boundaries
   switch (zone) {
     case ZONE_TITLE:
       x_start = ZONE_TITLE_X_START; x_end = ZONE_TITLE_X_END;
@@ -128,7 +97,42 @@ void clearZone(Zone zone) {
     default:
       return;
   }
-  tft.drawRect(x_start, y_start, x_end - x_start + 1, y_end - y_start + 1, TFT_WHITE);
+
+  int zoneW = x_end - x_start + 1;
+  int zoneH = y_end - y_start + 1;
+
+#if SPRITE_BG_ENABLED
+  // Push sprite background
+  switch (zone) {
+    case ZONE_TITLE:
+      tft.pushImage(x_start, y_start, SPRITE_TITLE_WIDTH, SPRITE_TITLE_HEIGHT, SPRITE_TITLE);
+      break;
+    case ZONE_CLOCK:
+      tft.pushImage(x_start, y_start, SPRITE_CLOCK_WIDTH, SPRITE_CLOCK_HEIGHT, SPRITE_CLOCK);
+      break;
+    case ZONE_STATUS:
+      tft.pushImage(x_start, y_start, SPRITE_STATUS_WIDTH, SPRITE_STATUS_HEIGHT, SPRITE_STATUS);
+      break;
+    case ZONE_CONTENT1:
+      tft.pushImage(x_start, y_start, SPRITE_CONTENT1_WIDTH, SPRITE_CONTENT1_HEIGHT, SPRITE_CONTENT1);
+      break;
+    case ZONE_CONTENT2:
+      tft.pushImage(x_start, y_start, SPRITE_CONTENT2_WIDTH, SPRITE_CONTENT2_HEIGHT, SPRITE_CONTENT2);
+      break;
+    case ZONE_CONTENT3:
+      tft.pushImage(x_start, y_start, SPRITE_CONTENT3_WIDTH, SPRITE_CONTENT3_HEIGHT, SPRITE_CONTENT3);
+      break;
+    default:
+      break;
+  }
+#else
+  // Clear with solid background color
+  tft.fillRect(x_start, y_start, zoneW, zoneH, COLOR_BACKGROUND);
+#endif
+
+#if DEBUG_SHOW_ZONES
+  // Draw debug borders on top (reusing x_start, y_start, zoneW, zoneH from above)
+  tft.drawRect(x_start, y_start, zoneW, zoneH, TFT_WHITE);
 #endif
 }
 
@@ -152,10 +156,12 @@ static TFT_eSprite titleSprite = TFT_eSprite(&tft);
 static bool titleSpriteCreated = false;
 
 void drawTitle() {
-  // Create sprite once
+  // Create sprite once - use zone dimensions, not sprite header dimensions
+  static const int titleW = ZONE_TITLE_X_END - ZONE_TITLE_X_START + 1;
+  static const int titleH = ZONE_TITLE_Y_END - ZONE_TITLE_Y_START + 1;
   if (!titleSpriteCreated) {
-    titleSprite.createSprite(SPRITE_TITLE_WIDTH, SPRITE_TITLE_HEIGHT);
-    titleSprite.setFreeFont(&MDIOTrial_Bold9pt7b);
+    titleSprite.createSprite(titleW, titleH);
+    titleSprite.setFreeFont(&MDIOTrial_Bold10pt7b);
     titleSpriteCreated = true;
   }
 
@@ -170,6 +176,12 @@ void drawTitle() {
 
   // Push to screen
   titleSprite.pushSprite(ZONE_TITLE_X_START, ZONE_TITLE_Y_START);
+
+#if DEBUG_SHOW_ZONES
+  tft.drawRect(ZONE_TITLE_X_START, ZONE_TITLE_Y_START,
+               ZONE_TITLE_X_END - ZONE_TITLE_X_START + 1,
+               ZONE_TITLE_Y_END - ZONE_TITLE_Y_START + 1, TFT_WHITE);
+#endif
 }
 
 // ==================== Clock Zone ====================
@@ -194,9 +206,11 @@ void updateClock() {
   }
   strcpy(previousTimeStr, timeStr);
 
-  // Create sprite once
+  // Create sprite once - use zone dimensions, not sprite header dimensions
+  static const int clockW = ZONE_CLOCK_X_END - ZONE_CLOCK_X_START + 1;
+  static const int clockH = ZONE_CLOCK_Y_END - ZONE_CLOCK_Y_START + 1;
   if (!clockSpriteCreated) {
-    clockSprite.createSprite(SPRITE_CLOCK_WIDTH, SPRITE_CLOCK_HEIGHT);
+    clockSprite.createSprite(clockW, clockH);
     clockSprite.setFreeFont(&MDIOTrial_Regular9pt7b);
     clockSpriteCreated = true;
   }
@@ -211,6 +225,12 @@ void updateClock() {
 
   // Push to screen
   clockSprite.pushSprite(ZONE_CLOCK_X_START, ZONE_CLOCK_Y_START);
+
+#if DEBUG_SHOW_ZONES
+  tft.drawRect(ZONE_CLOCK_X_START, ZONE_CLOCK_Y_START,
+               ZONE_CLOCK_X_END - ZONE_CLOCK_X_START + 1,
+               ZONE_CLOCK_Y_END - ZONE_CLOCK_Y_START + 1, TFT_WHITE);
+#endif
 }
 // ==================== Status Zone (Now Playing / PC Stats) ====================
 // Sprites for flicker-free rendering - dimensions calculated from zone boundaries
@@ -221,12 +241,12 @@ static TFT_eSprite textSprite = TFT_eSprite(&tft);     // Text-only zone
 static bool npSpriteCreated = false;
 static bool npZoneCleared = false;  // One-time zone clear
 
-// Color definitions for PC stats
-#define COLOR_CPU    0xFD20   // Orange
-#define COLOR_GPU    0xF81F   // Magenta
-#define COLOR_RAM    TFT_YELLOW
-#define COLOR_NET    TFT_GREEN
-#define COLOR_SEP    0x4208   // Dark gray for separators
+// Color definitions for PC stats - bright vibrant colors
+#define COLOR_CPU    0xFBE0   // Bright orange
+#define COLOR_GPU    0xFC1F   // Hot pink/magenta
+#define COLOR_RAM    0xFFE0   // Bright yellow
+#define COLOR_NET    0x07E0   // Bright green
+#define COLOR_SEP    0x6B6D   // Medium gray for separators
 
 void drawPcStats() {
   const int zoneX = ZONE_STATUS_X_START;
@@ -254,7 +274,7 @@ void drawPcStats() {
   npSprite.setTextSize(1);
 
   int x = 5;
-  int y = 3;
+  int y = 2;
 
   bool flashOn = (millis() / 300) % 2 == 0;
 
@@ -290,7 +310,7 @@ void drawPcStats() {
 
   // RAM as pie chart (moved before GPU)
   int ramCx = x + 7;
-  int ramCy = zoneH / 2;
+  int ramCy = zoneH / 2 - 1;  // Move up 2px to align with text
   int ramRadius = 6;
   float ramPercent = (pcRamTotal > 0) ? (float)pcRamUsed / pcRamTotal : 0;
   int ramAngle = (int)(ramPercent * 360);
@@ -327,7 +347,7 @@ void drawPcStats() {
   // Draw GPU usage (always magenta)
   npSprite.setTextColor(COLOR_GPU);
   char gpuUsageStr[8];
-  snprintf(gpuUsageStr, sizeof(gpuUsageStr), "%d%%", pcGpuUsage);
+  snprintf(gpuUsageStr, sizeof(gpuUsageStr), " %d%%", pcGpuUsage);
   npSprite.drawString(gpuUsageStr, x, y);
   x += npSprite.textWidth(gpuUsageStr);
 
@@ -336,25 +356,26 @@ void drawPcStats() {
   npSprite.drawString("|", x, y);
   x += npSprite.textWidth("|");
 
-  // Network: Download (green), Upload (cyan) with M suffix
+  // Network: Download speed - compact format (always ~3 chars)
+  // < 1M: .xM | 1-99M: xxM | 100-999M: .xG | ≥1000M: xG
   npSprite.setTextColor(COLOR_NET);
   char downStr[8];
-  if (pcNetDown >= 10) {
+  if (pcNetDown >= 1000) {
+    // ≥1 Gbps: show as xG (1G, 2G, etc.)
+    snprintf(downStr, sizeof(downStr), "%.0fG", pcNetDown / 1000);
+  } else if (pcNetDown >= 100) {
+    // 100-999 Mbps: show as .xG (.1G, .3G, .9G)
+    int decimal = (int)(pcNetDown / 100) % 10;
+    snprintf(downStr, sizeof(downStr), ".%dG", decimal);
+  } else if (pcNetDown > 0.9) {
+    // 1-99 Mbps: show as integer (1M, 12M, 99M)
     snprintf(downStr, sizeof(downStr), "%.0fM", pcNetDown);
   } else {
-    snprintf(downStr, sizeof(downStr), "%.1fM", pcNetDown);
+    // < 1 Mbps: show as .xM (.0M, .5M, .9M)
+    int decimal = (int)(pcNetDown * 10) % 10;
+    snprintf(downStr, sizeof(downStr), ".%dM", decimal);
   }
   npSprite.drawString(downStr, x, y);
-  x += npSprite.textWidth(downStr);
-
-  npSprite.setTextColor(TFT_CYAN);
-  char upStr[8];
-  if (pcNetUp >= 10) {
-    snprintf(upStr, sizeof(upStr), "%.0fM", pcNetUp);
-  } else {
-    snprintf(upStr, sizeof(upStr), "%.1fM", pcNetUp);
-  }
-  npSprite.drawString(upStr, x, y);
 
 #if DEBUG_SHOW_ZONES
   npSprite.drawRect(0, 0, zoneW, zoneH, TFT_WHITE);
@@ -454,11 +475,11 @@ void drawNowPlaying() {
     // Draw text at offset (coordinates are now relative to viewport)
     int textX = -scrollPixel;
     npSprite.setTextColor(TFT_MAGENTA);
-    npSprite.drawString(fullText, textX, 3);
+    npSprite.drawString(fullText, textX, 1);
 
     // Draw second copy for seamless wrap
     if (textX + textWidth < textZoneW) {
-      npSprite.drawString(fullText, textX + textWidth, 3);
+      npSprite.drawString(fullText, textX + textWidth, 1);
     }
 
     // Reset viewport to full sprite
@@ -533,14 +554,14 @@ void refreshScreen() {
     if (isZoneDirty(ZONE_CONTENT1)) clearZone(ZONE_CONTENT1);
     if (isZoneDirty(ZONE_CONTENT2)) clearZone(ZONE_CONTENT2);
     if (isZoneDirty(ZONE_CONTENT3)) clearZone(ZONE_CONTENT3);
-    
+
     // Draw content
     if (currentScreen == SCREEN_NOTIFS) {
       drawNotifContent();
     } else {
       drawReminderContent();
     }
-    
+
     // Clear all dirty flags
     clearZoneDirty(ZONE_CONTENT1);
     clearZoneDirty(ZONE_CONTENT2);

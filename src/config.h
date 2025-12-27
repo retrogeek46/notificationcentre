@@ -9,8 +9,8 @@
 #define TFT_ROTATION 3
 
 // Debugging
-#define DEBUG_SHOW_ZONES 1
-#define SPRITE_BG_ENABLED 0  // Set to 1 to enable sprite backgrounds, 0 for solid fill
+#define DEBUG_SHOW_ZONES 0
+#define SPRITE_BG_ENABLED 1  // Set to 1 to enable sprite backgrounds, 0 for solid fill
 
 // Motor driver pins (L298N Motor A) - Left side only
 #define MOTOR_ENA 33   // PWM speed control

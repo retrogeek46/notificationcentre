@@ -1,46 +1,86 @@
 #!/usr/bin/env python3
 """
-Split a 320x240 sprite into 4 zone-based C header arrays for TFT_eSPI sprites.
-Zones: Title, Clock, Status, Content
+Split a 320x240 sprite into zone-based C header arrays for TFT_eSPI sprites.
+Zones are read dynamically from types.h to stay in sync with the C code.
 """
 
 import os
 import sys
+import re
 from PIL import Image
 
-# Zone definitions (matching types.h)
-ZONES = {
-    'title': {
-        'x_start': 0, 'x_end': 136,
-        'y_start': 0, 'y_end': 24,
-        'array_name': 'SPRITE_TITLE'
-    },
-    'clock': {
-        'x_start': 137, 'x_end': 319,
-        'y_start': 0, 'y_end': 24,
-        'array_name': 'SPRITE_CLOCK'
-    },
-    'status': {
-        'x_start': 0, 'x_end': 319,
-        'y_start': 25, 'y_end': 44,
-        'array_name': 'SPRITE_STATUS'
-    },
-    'content1': {
-        'x_start': 0, 'x_end': 319,
-        'y_start': 45, 'y_end': 109,  # Slot 1 (65px height)
-        'array_name': 'SPRITE_CONTENT1'
-    },
-    'content2': {
-        'x_start': 0, 'x_end': 319,
-        'y_start': 110, 'y_end': 174,  # Slot 2 (65px height)
-        'array_name': 'SPRITE_CONTENT2'
-    },
-    'content3': {
-        'x_start': 0, 'x_end': 319,
-        'y_start': 175, 'y_end': 239,  # Slot 3 (65px height)
-        'array_name': 'SPRITE_CONTENT3'
+
+def parse_types_h(types_h_path):
+    """Parse types.h to extract zone boundary constants."""
+    with open(types_h_path, 'r') as f:
+        content = f.read()
+
+    # Pattern to match: const int ZONE_XXX_Y_ZZZ = NNN;
+    pattern = r'const\s+int\s+(ZONE_\w+)\s*=\s*(\d+)\s*;'
+    matches = re.findall(pattern, content)
+
+    constants = {name: int(value) for name, value in matches}
+    return constants
+
+
+def build_zones_from_types_h(base_dir):
+    """Build ZONES dictionary by reading types.h."""
+    types_h_path = os.path.join(base_dir, 'src', 'types.h')
+
+    if not os.path.exists(types_h_path):
+        print(f"[ERROR] types.h not found at: {types_h_path}")
+        sys.exit(1)
+
+    constants = parse_types_h(types_h_path)
+    print(f"[INFO] Parsed {len(constants)} zone constants from types.h")
+
+    # Build zones from parsed constants
+    zones = {
+        'title': {
+            'x_start': constants.get('ZONE_TITLE_X_START', 0),
+            'x_end': constants.get('ZONE_TITLE_X_END', 99),
+            'y_start': constants.get('ZONE_TITLE_Y_START', 0),
+            'y_end': constants.get('ZONE_TITLE_Y_END', 24),
+            'array_name': 'SPRITE_TITLE'
+        },
+        'clock': {
+            'x_start': constants.get('ZONE_CLOCK_X_START', 100),
+            'x_end': constants.get('ZONE_CLOCK_X_END', 319),
+            'y_start': constants.get('ZONE_CLOCK_Y_START', 0),
+            'y_end': constants.get('ZONE_CLOCK_Y_END', 24),
+            'array_name': 'SPRITE_CLOCK'
+        },
+        'status': {
+            'x_start': constants.get('ZONE_STATUS_X_START', 0),
+            'x_end': constants.get('ZONE_STATUS_X_END', 319),
+            'y_start': constants.get('ZONE_STATUS_Y_START', 25),
+            'y_end': constants.get('ZONE_STATUS_Y_END', 44),
+            'array_name': 'SPRITE_STATUS'
+        },
+        'content1': {
+            'x_start': constants.get('ZONE_CONTENT1_X_START', 0),
+            'x_end': constants.get('ZONE_CONTENT1_X_END', 319),
+            'y_start': constants.get('ZONE_CONTENT1_Y_START', 45),
+            'y_end': constants.get('ZONE_CONTENT1_Y_END', 109),
+            'array_name': 'SPRITE_CONTENT1'
+        },
+        'content2': {
+            'x_start': constants.get('ZONE_CONTENT2_X_START', 0),
+            'x_end': constants.get('ZONE_CONTENT2_X_END', 319),
+            'y_start': constants.get('ZONE_CONTENT2_Y_START', 110),
+            'y_end': constants.get('ZONE_CONTENT2_Y_END', 174),
+            'array_name': 'SPRITE_CONTENT2'
+        },
+        'content3': {
+            'x_start': constants.get('ZONE_CONTENT3_X_START', 0),
+            'x_end': constants.get('ZONE_CONTENT3_X_END', 319),
+            'y_start': constants.get('ZONE_CONTENT3_Y_START', 175),
+            'y_end': constants.get('ZONE_CONTENT3_Y_END', 239),
+            'array_name': 'SPRITE_CONTENT3'
+        }
     }
-}
+
+    return zones
 
 def rgb_to_565(r, g, b):
     """Convert 8-bit RGB to 16-bit RGB565 (byte-swapped for TFT_eSPI)."""
@@ -91,8 +131,8 @@ const uint16_t {array_name}[{width * height}] PROGMEM = {{
 
     return width, height, len(rgb565_data) * 2
 
-def split_sprite(input_path, output_dir):
-    """Split a 320x240 sprite into 4 zone header files."""
+def split_sprite(input_path, output_dir, zones):
+    """Split a 320x240 sprite into zone header files."""
     # Load and validate image
     img = Image.open(input_path).convert('RGB')
     width, height = img.size
@@ -107,7 +147,7 @@ def split_sprite(input_path, output_dir):
 
     total_bytes = 0
 
-    for zone_name, zone in ZONES.items():
+    for zone_name, zone in zones.items():
         # Crop zone from full image
         zone_img = crop_zone(img, zone)
 
@@ -126,6 +166,9 @@ def split_sprite(input_path, output_dir):
 def main():
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     os.chdir(base_dir)
+
+    # Build zones dynamically from types.h
+    zones = build_zones_from_types_h(base_dir)
 
     # Default input path - look for a full sprite
     default_inputs = [
@@ -160,7 +203,7 @@ def main():
     output_dir = "src/sprites"
     os.makedirs(output_dir, exist_ok=True)
 
-    split_sprite(input_path, output_dir)
+    split_sprite(input_path, output_dir, zones)
 
 if __name__ == "__main__":
     main()
