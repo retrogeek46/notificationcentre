@@ -3,7 +3,7 @@
 #pragma once
 #include <Arduino.h>
 
-const uint16_t SPRITE_CLOCK_WIDTH = 183;
+const uint16_t SPRITE_CLOCK_WIDTH = 220;
 const uint16_t SPRITE_CLOCK_HEIGHT = 25;
 
 const uint16_t SPRITE_CLOCK[4575] PROGMEM = {

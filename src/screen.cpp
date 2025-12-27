@@ -132,6 +132,21 @@ void clearZone(Zone zone) {
 #endif
 }
 
+// ==================== Zone Sprite Helper ====================
+/**
+ * Prepare a sprite with background - either sprite image or solid fill
+ * @param sprite    - TFT_eSprite to render into (must already be created)
+ * @param bgSprite  - PROGMEM sprite array
+ * @param bgW, bgH  - Sprite dimensions
+ */
+void prepareZoneSprite(TFT_eSprite& sprite, const uint16_t* bgSprite, int bgW, int bgH) {
+#if SPRITE_BG_ENABLED
+  sprite.pushImage(0, 0, bgW, bgH, bgSprite);
+#else
+  sprite.fillSprite(COLOR_BACKGROUND);
+#endif
+}
+
 // ==================== Title Zone ====================
 static TFT_eSprite titleSprite = TFT_eSprite(&tft);
 static bool titleSpriteCreated = false;
@@ -144,8 +159,8 @@ void drawTitle() {
     titleSpriteCreated = true;
   }
 
-  // Draw pixel art background from PROGMEM
-  titleSprite.pushImage(0, 0, SPRITE_TITLE_WIDTH, SPRITE_TITLE_HEIGHT, SPRITE_TITLE);
+  // Prepare background (sprite or solid fill based on SPRITE_BG_ENABLED)
+  prepareZoneSprite(titleSprite, SPRITE_TITLE, SPRITE_TITLE_WIDTH, SPRITE_TITLE_HEIGHT);
 
   // Overlay text
   titleSprite.setTextSize(1);
@@ -186,13 +201,13 @@ void updateClock() {
     clockSpriteCreated = true;
   }
 
-  // Draw pixel art background from PROGMEM
-  clockSprite.pushImage(0, 0, SPRITE_CLOCK_WIDTH, SPRITE_CLOCK_HEIGHT, SPRITE_CLOCK);
+  // Prepare background (sprite or solid fill based on SPRITE_BG_ENABLED)
+  prepareZoneSprite(clockSprite, SPRITE_CLOCK, SPRITE_CLOCK_WIDTH, SPRITE_CLOCK_HEIGHT);
 
   // Overlay text
   clockSprite.setTextSize(1);
   clockSprite.setTextColor(COLOR_CLOCK);
-  clockSprite.drawString(timeStr, 7, 5);
+  clockSprite.drawString(timeStr, 8, 5);
 
   // Push to screen
   clockSprite.pushSprite(ZONE_CLOCK_X_START, ZONE_CLOCK_Y_START);
@@ -234,8 +249,8 @@ void drawPcStats() {
     npSpriteCreated = true;
   }
 
-  // Draw pixel art background from PROGMEM
-  npSprite.pushImage(0, 0, SPRITE_STATUS_WIDTH, SPRITE_STATUS_HEIGHT, SPRITE_STATUS);
+  // Prepare background (sprite or solid fill based on SPRITE_BG_ENABLED)
+  prepareZoneSprite(npSprite, SPRITE_STATUS, SPRITE_STATUS_WIDTH, SPRITE_STATUS_HEIGHT);
   npSprite.setTextSize(1);
 
   int x = 5;
@@ -270,8 +285,8 @@ void drawPcStats() {
 
   // Separator after CPU
   npSprite.setTextColor(COLOR_SEP);
-  npSprite.drawString("|", x, y);
-  x += npSprite.textWidth("|");
+  npSprite.drawString("| ", x, y);
+  x += npSprite.textWidth("| ");
 
   // RAM as pie chart (moved before GPU)
   int ramCx = x + 7;
@@ -387,8 +402,8 @@ void drawNowPlaying() {
     npSpriteCreated = true;
   }
 
-  // Render pixel art background from PROGMEM
-  npSprite.pushImage(0, 0, SPRITE_STATUS_WIDTH, SPRITE_STATUS_HEIGHT, SPRITE_STATUS);
+  // Prepare background (sprite or solid fill based on SPRITE_BG_ENABLED)
+  prepareZoneSprite(npSprite, SPRITE_STATUS, SPRITE_STATUS_WIDTH, SPRITE_STATUS_HEIGHT);
 
   // Draw disc icon to sprite - always spinning, color depends on state
   // Center disc in left portion of sprite (roughly 11px from left, centered vertically)

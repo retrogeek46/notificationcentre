@@ -3,7 +3,7 @@
 #pragma once
 #include <Arduino.h>
 
-const uint16_t SPRITE_TITLE_WIDTH = 137;
+const uint16_t SPRITE_TITLE_WIDTH = 100;
 const uint16_t SPRITE_TITLE_HEIGHT = 25;
 
 const uint16_t SPRITE_TITLE[3425] PROGMEM = {

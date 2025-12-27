@@ -17,14 +17,14 @@ enum Zone {
 };
 
 // Zone boundaries (zones extend to screen edges)
-// Title zone: 0-136 x 0-24
+// Title zone: 0-99 x 0-24
 const int ZONE_TITLE_X_START = 0;
-const int ZONE_TITLE_X_END = 136;
+const int ZONE_TITLE_X_END = 99;
 const int ZONE_TITLE_Y_START = 0;
 const int ZONE_TITLE_Y_END = 24;
 
-// Clock zone: 137-319 x 0-24
-const int ZONE_CLOCK_X_START = 137;
+// Clock zone: 100-319 x 0-24
+const int ZONE_CLOCK_X_START = 100;
 const int ZONE_CLOCK_X_END = 319;
 const int ZONE_CLOCK_Y_START = 0;
 const int ZONE_CLOCK_Y_END = 24;
