@@ -119,13 +119,39 @@ void handleCompleteReminder(AsyncWebServerRequest* request) {
 // Base64 decoding helper using mbedtls
 #include "mbedtls/base64.h"
 
-static bool decodeAlbumArt(const String& artB64) {
-  if (artB64.length() == 0) {
+static bool decodeAlbumArt(const String& artData) {
+  if (artData.length() == 0) {
     return false;
   }
 
-  // Expected size: 18x18 pixels * 2 bytes = 648 bytes
-  const size_t expectedSize = ALBUM_ART_PIXELS * 2;
+  // Parse format: WxH;base64data
+  int semiPos = artData.indexOf(';');
+  if (semiPos < 0) {
+    Serial.println("Album art: invalid format (no semicolon)");
+    return false;
+  }
+
+  String dimStr = artData.substring(0, semiPos);
+  String artB64 = artData.substring(semiPos + 1);
+
+  // Parse dimensions (WxH)
+  int xPos = dimStr.indexOf('x');
+  if (xPos < 0) {
+    Serial.println("Album art: invalid dimensions");
+    return false;
+  }
+
+  int width = dimStr.substring(0, xPos).toInt();
+  int height = dimStr.substring(xPos + 1).toInt();
+
+  // Validate dimensions
+  if (width < 1 || width > ALBUM_ART_MAX_WIDTH || height != ALBUM_ART_SIZE) {
+    Serial.printf("Album art: invalid size %dx%d\n", width, height);
+    return false;
+  }
+
+  // Expected size based on dimensions
+  const size_t expectedSize = width * height * 2;  // 2 bytes per pixel
   size_t outputLen = 0;
 
   // Decode base64
@@ -142,14 +168,25 @@ static bool decodeAlbumArt(const String& artB64) {
     return false;
   }
 
-  Serial.printf("Album art decoded: %d bytes\n", outputLen);
+  // Store dimensions
+  albumArtWidth = width;
+  albumArtHeight = height;
+
+  Serial.printf("Album art decoded: %dx%d (%d bytes)\n", width, height, outputLen);
   return true;
 }
 
 void handleNowPlaying(AsyncWebServerRequest* request) {
   String song = request->hasParam("song", true) ? request->getParam("song", true)->value() : "";
   String artist = request->hasParam("artist", true) ? request->getParam("artist", true)->value() : "";
-  String artB64 = request->hasParam("art", true) ? request->getParam("art", true)->value() : "";
+  
+  // Use arg() for 'art' as it's typically a large body parameter
+  String artB64 = "";
+  if (request->hasArg("art")) {
+    artB64 = request->arg("art");
+  } else if (request->hasParam("art", true)) {
+    artB64 = request->getParam("art", true)->value();
+  }
 
   // If song is empty, clear now playing (but preserve disc frame state)
   if (song.length() == 0) {
@@ -158,7 +195,6 @@ void handleNowPlaying(AsyncWebServerRequest* request) {
     nowPlayingActive = false;
     nowPlayingScrollPixel = 0;
     albumArtValid = false;  // Clear album art
-    // Don't reset discFrame - keep current position for resume
     setZoneDirty(ZONE_STATUS);
 
     Serial.println("Now Playing: cleared");
@@ -166,22 +202,27 @@ void handleNowPlaying(AsyncWebServerRequest* request) {
     return;
   }
 
-  // New song - reset scroll position but preserve disc frame
+  Serial.printf("Now Playing: %s - %s (art length: %d)\n", song.c_str(), artist.c_str(), artB64.length());
+
+  // New song - start scroll from right edge
   nowPlayingSong = song;
   nowPlayingArtist = artist;
   nowPlayingUpdated = millis();
-  nowPlayingScrollPixel = 0;
+  nowPlayingScrollPixel = -320; 
   lastScrollUpdate = millis();
-  // Don't reset discFrame - keep spinning from current position
   lastDiscUpdate = millis();
   nowPlayingActive = true;
 
   // Decode album art if provided
-  albumArtValid = decodeAlbumArt(artB64);
+  if (artB64.length() > 0) {
+    albumArtValid = decodeAlbumArt(artB64);
+  } else {
+    albumArtValid = false;
+  }
 
-  setZoneDirty(ZONE_STATUS);
+  setZoneDirty(ZONE_STATUS);  // Album art displays in status zone
 
-  Serial.printf("Now Playing: %s - %s %s\n", song.c_str(), artist.c_str(), albumArtValid ? "(+art)" : "(no art)");
+  Serial.printf("Now Playing: Update done, artValid=%d\n", albumArtValid);
   request->send(200, "application/json", "{\"status\":\"ok\"}");
 }
 

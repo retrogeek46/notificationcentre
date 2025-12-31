@@ -23,6 +23,8 @@ import io
 import logging
 import os
 import struct
+import subprocess
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
@@ -74,8 +76,9 @@ STATS_INTERVAL = 1.0  # seconds - slower for PC stats
 REQUEST_TIMEOUT = 2   # seconds
 
 # Album art settings
-ALBUM_ART_SIZE = 18  # 18x18 pixels to fit ESP32 status zone
-ALBUM_ART_ENABLED = False  # Disabled - open_read_async blocks in persistent event loop
+ALBUM_ART_SIZE = 18  # 18x18 pixels for status bar (with 1px border)
+ALBUM_ART_ENABLED = True  # Uses subprocess approach
+ALBUM_ART_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "extract_album_art.py")
 
 # Paths
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -455,52 +458,41 @@ class PCWatcher:
             artist = props.artist or ""
             log.debug(f"title = {title[:30]}...")
 
-            # Album art extraction using winsdk
+            # Album art extraction using subprocess (avoids event loop blocking)
             art_b64 = ""
             if ALBUM_ART_ENABLED:
                 song_key = f"{title}|{artist}"
-                
+
                 # Check cache first
                 if song_key == self._cached_song_key and self._cached_art:
                     art_b64 = self._cached_art
                     log.debug("Using cached art")
-                elif props.thumbnail:
+                else:
                     try:
-                        log.debug("Opening thumbnail stream...")
-                        thumb_stream_ref = props.thumbnail
-                        readable_stream = await thumb_stream_ref.open_read_async()
-                        log.debug(f"Stream opened, size = {readable_stream.size}")
-                        
-                        buffer = Buffer(readable_stream.size)
-                        log.debug("Reading stream...")
-                        await readable_stream.read_async(buffer, buffer.capacity, InputStreamOptions.NONE)
-                        log.debug("Stream read complete")
-                        
-                        reader = DataReader.from_buffer(buffer)
-                        byte_array = bytearray(readable_stream.size)
-                        reader.read_bytes(byte_array)
-                        
-                        # Resize with PIL
-                        log.debug("Processing with PIL...")
-                        img = Image.open(io.BytesIO(byte_array))
-                        img = img.convert("RGB")
-                        img = img.resize((ALBUM_ART_SIZE, ALBUM_ART_SIZE), Image.Resampling.LANCZOS)
-                        
-                        # Convert to RGB565
-                        rgb565_data = bytearray()
-                        for y in range(ALBUM_ART_SIZE):
-                            for x in range(ALBUM_ART_SIZE):
-                                r, g, b = img.getpixel((x, y))
-                                rgb565 = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3)
-                                rgb565_data.extend(struct.pack(">H", rgb565))
-                        
-                        art_b64 = base64.b64encode(rgb565_data).decode("ascii")
-                        
-                        # Cache on success
-                        self._cached_song_key = song_key
-                        self._cached_art = art_b64
-                        log.debug(f"Album art extracted: {len(art_b64)} chars")
-                        
+                        log.debug("Extracting album art via subprocess...")
+                        # Run subprocess in executor to avoid blocking
+                        loop = asyncio.get_event_loop()
+                        result = await loop.run_in_executor(
+                            None,
+                            lambda: subprocess.run(
+                                [sys.executable, ALBUM_ART_SCRIPT],
+                                capture_output=True,
+                                text=True,
+                                timeout=5
+                            )
+                        )
+
+                        if result.returncode == 0 and result.stdout.strip():
+                            art_b64 = result.stdout.strip()
+                            # Cache on success
+                            self._cached_song_key = song_key
+                            self._cached_art = art_b64
+                            log.debug(f"Album art extracted: {len(art_b64)} chars")
+                        else:
+                            log.debug(f"Album art subprocess returned code {result.returncode}")
+
+                    except subprocess.TimeoutExpired:
+                        log.debug("Album art extraction timed out")
                     except Exception as e:
                         log.debug(f"Album art extraction failed: {e}")
 
@@ -516,6 +508,7 @@ class PCWatcher:
             data = {"song": song, "artist": artist}
             if art:
                 data["art"] = art
+                log.debug(f"Sending album art payload: {len(art)} chars")
             response = requests.post(ESP32_NOWPLAYING_URL, data=data, timeout=REQUEST_TIMEOUT)
             if response.status_code == 200:
                 if song:
@@ -676,11 +669,6 @@ class PCWatcher:
                     self.last_artist = ""
                     self.last_playing = False
 
-            # Always send stats at the configured interval
-            if current_time - self.last_stats_update >= STATS_INTERVAL:
-                self.send_stats()
-                self.last_stats_update = current_time
-
             # Watch media when not gaming
             if not self.gaming_mode:
                 song, artist, is_playing, art = await self.get_media_info()
@@ -693,10 +681,19 @@ class PCWatcher:
                         self.send_now_playing(song, artist, art)
                     elif not is_playing and self.last_playing:
                         self.send_now_playing("", "")
+                        # Music stopped: trigger immediate stats refresh
+                        self.send_stats()
+                        self.last_stats_update = current_time
 
                     self.last_song = song or ""
                     self.last_artist = artist or ""
                     self.last_playing = is_playing
+
+            # Send stats at interval - but SKIP if music is playing (unless gaming)
+            if current_time - self.last_stats_update >= STATS_INTERVAL:
+                if self.gaming_mode or not self.last_playing:
+                    self.send_stats()
+                self.last_stats_update = current_time
 
             await asyncio.sleep(POLL_INTERVAL)
 

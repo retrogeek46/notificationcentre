@@ -32,8 +32,11 @@ extern unsigned long lastIdleDiscMove; // Last idle disc position update
 extern bool nowPlayingActive;          // Is music currently playing?
 
 // ==================== Album Art ====================
-#define ALBUM_ART_PIXELS (ALBUM_ART_SIZE * ALBUM_ART_SIZE)  // 324 pixels
-extern uint16_t albumArt[ALBUM_ART_PIXELS];  // RGB565 buffer (648 bytes)
+#define ALBUM_ART_MAX_WIDTH 64                         // Max width for 16:9 thumbnails
+#define ALBUM_ART_MAX_PIXELS (ALBUM_ART_MAX_WIDTH * ALBUM_ART_SIZE)  // 64*18 = 1152 pixels max
+extern uint16_t albumArt[ALBUM_ART_MAX_PIXELS];  // RGB565 buffer (2304 bytes max)
+extern int albumArtWidth;           // Actual width of current art
+extern int albumArtHeight;          // Actual height of current art (always 18)
 extern bool albumArtValid;          // True when buffer has valid art
 
 // ==================== PC Stats (Gaming Mode) ====================

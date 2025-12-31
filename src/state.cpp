@@ -29,7 +29,9 @@ unsigned long lastIdleDiscMove = 0;
 bool nowPlayingActive = false;
 
 // ==================== Album Art ====================
-uint16_t albumArt[ALBUM_ART_PIXELS] = {0};
+uint16_t albumArt[ALBUM_ART_MAX_PIXELS] = {0};
+int albumArtWidth = ALBUM_ART_SIZE;   // Default to square
+int albumArtHeight = ALBUM_ART_SIZE;
 bool albumArtValid = false;
 
 // ==================== PC Stats (Gaming Mode) ====================

@@ -439,25 +439,138 @@ void drawNowPlaying() {
   // Prepare background (sprite or solid fill based on SPRITE_BG_ENABLED)
   prepareZoneSprite(npSprite, SPRITE_STATUS, SPRITE_STATUS_WIDTH, SPRITE_STATUS_HEIGHT);
 
-  // Album art position (1px padding from top)
-  const int artX = 1;  // Left aligned with padding
-  const int artY = 1;  // 1px from top for centering in 20px zone
+  // Album art dimensions with 1px border
+  const int artBoxSize = ALBUM_ART_SIZE + 2;  // 20px total with border
+  const int artInnerOffset = 1;  // 1px border offset
+  const int artTextGap = 4;  // Gap between art and text
 
   // Draw album art if playing and valid, otherwise draw disc
   if (nowPlayingActive && albumArtValid) {
-    // Draw album art directly from buffer
-    npSprite.pushImage(artX, artY, ALBUM_ART_SIZE, ALBUM_ART_SIZE, albumArt);
+    // ==== Album art + text scroll together ====
+    // Art box size based on actual dimensions (variable width, fixed height)
+    const int artW = albumArtWidth;
+    const int artH = albumArtHeight;
+    const int boxW = artW + 2;  // 1px border each side
+    const int boxH = artH + 2;  // Should always be 20 (18 + 2)
+
+    String fullText = nowPlayingSong;
+    if (nowPlayingArtist.length() > 0) {
+      fullText += " - " + nowPlayingArtist;
+    }
+    fullText += "    ";  // Gap before repeat
+
+    // Calculate total content width (art box + gap + text)
+    int textWidth = npSprite.textWidth(fullText);
+    int totalWidth = boxW + artTextGap + textWidth;
+
+    // Wrap scroll position
+    int scrollPixel = nowPlayingScrollPixel % totalWidth;
+
+    // First copy position
+    int contentX = -scrollPixel;
+
+    // Draw first copy (art + text)
+    // Art box with variable width
+    npSprite.drawRect(contentX, 0, boxW, boxH, TFT_WHITE);
+    npSprite.pushImage(contentX + artInnerOffset, artInnerOffset, artW, artH, albumArt);
+    // Text after art
+    npSprite.setTextColor(COLOR_NOW_PLAYING);
+    npSprite.drawString(fullText, contentX + boxW + artTextGap, STATUS_TEXT_Y);
+
+    // Second copy for seamless wrap
+    int secondX = contentX + totalWidth;
+    if (secondX < zoneW) {
+      npSprite.drawRect(secondX, 0, boxW, boxH, TFT_WHITE);
+      npSprite.pushImage(secondX + artInnerOffset, artInnerOffset, artW, artH, albumArt);
+      npSprite.drawString(fullText, secondX + boxW + artTextGap, STATUS_TEXT_Y);
+    }
+  } else if (nowPlayingActive && nowPlayingSong.length() > 0) {
+    // ==== Disc + text scroll together (no album art) ====
+    String fullText = nowPlayingSong;
+    if (nowPlayingArtist.length() > 0) {
+      fullText += " - " + nowPlayingArtist;
+    }
+    fullText += "    ";
+
+    // Disc size constants
+    const int discBoxSize = (STATUS_DISC_RADIUS * 2) + 2;  // Bounding box for disc
+    const int discTextGap = 4;  // Gap between disc and text
+
+    // Calculate total content width (disc + gap + text)
+    int textWidth = npSprite.textWidth(fullText);
+    int totalWidth = discBoxSize + discTextGap + textWidth;
+
+    // Wrap scroll position
+    int scrollPixel = nowPlayingScrollPixel % totalWidth;
+
+    // First copy position
+    int contentX = -scrollPixel;
+
+    // Draw first copy (disc + text)
+    int cx = contentX + STATUS_DISC_RADIUS + 1;
+    int cy = zoneH / 2;
+    uint16_t discColor = TFT_WHITE;
+
+    // Spinning disc
+    float angle = (discFrame * 5.625) * PI / 180.0;
+    npSprite.drawCircle(cx, cy, STATUS_DISC_RADIUS, discColor);
+    npSprite.fillCircle(cx, cy, STATUS_DISC_INNER, discColor);
+
+    int t1x1 = cx + (int)(3 * cos(angle));
+    int t1y1 = cy + (int)(3 * sin(angle));
+    int t1x2 = cx + (int)(6 * cos(angle - 0.4));
+    int t1y2 = cy + (int)(6 * sin(angle - 0.4));
+    int t1x3 = cx + (int)(6 * cos(angle + 0.4));
+    int t1y3 = cy + (int)(6 * sin(angle + 0.4));
+    npSprite.fillTriangle(t1x1, t1y1, t1x2, t1y2, t1x3, t1y3, discColor);
+
+    float angle2 = angle + PI;
+    int t2x1 = cx + (int)(3 * cos(angle2));
+    int t2y1 = cy + (int)(3 * sin(angle2));
+    int t2x2 = cx + (int)(6 * cos(angle2 - 0.4));
+    int t2y2 = cy + (int)(6 * sin(angle2 - 0.4));
+    int t2x3 = cx + (int)(6 * cos(angle2 + 0.4));
+    int t2y3 = cy + (int)(6 * sin(angle2 + 0.4));
+    npSprite.fillTriangle(t2x1, t2y1, t2x2, t2y2, t2x3, t2y3, discColor);
+
+    // Text after disc
+    npSprite.setTextColor(COLOR_NOW_PLAYING);
+    npSprite.drawString(fullText, contentX + discBoxSize + discTextGap, STATUS_TEXT_Y);
+
+    // Second copy for seamless wrap
+    int secondX = contentX + totalWidth;
+    if (secondX < zoneW) {
+      int cx2 = secondX + STATUS_DISC_RADIUS + 1;
+      npSprite.drawCircle(cx2, cy, STATUS_DISC_RADIUS, discColor);
+      npSprite.fillCircle(cx2, cy, STATUS_DISC_INNER, discColor);
+
+      int s1x1 = cx2 + (int)(3 * cos(angle));
+      int s1y1 = cy + (int)(3 * sin(angle));
+      int s1x2 = cx2 + (int)(6 * cos(angle - 0.4));
+      int s1y2 = cy + (int)(6 * sin(angle - 0.4));
+      int s1x3 = cx2 + (int)(6 * cos(angle + 0.4));
+      int s1y3 = cy + (int)(6 * sin(angle + 0.4));
+      npSprite.fillTriangle(s1x1, s1y1, s1x2, s1y2, s1x3, s1y3, discColor);
+
+      int s2x1 = cx2 + (int)(3 * cos(angle2));
+      int s2y1 = cy + (int)(3 * sin(angle2));
+      int s2x2 = cx2 + (int)(6 * cos(angle2 - 0.4));
+      int s2y2 = cy + (int)(6 * sin(angle2 - 0.4));
+      int s2x3 = cx2 + (int)(6 * cos(angle2 + 0.4));
+      int s2y3 = cy + (int)(6 * sin(angle2 + 0.4));
+      npSprite.fillTriangle(s2x1, s2y1, s2x2, s2y2, s2x3, s2y3, discColor);
+
+      npSprite.drawString(fullText, secondX + discBoxSize + discTextGap, STATUS_TEXT_Y);
+    }
   } else {
-    // Draw disc icon - spinning, position depends on state
-    // When idle, disc travels across the zone; when playing (no art), stays at fixed position
-    int cx = nowPlayingActive ? STATUS_DISC_CX : idleDiscX;
-    int cy = zoneH / 2;  // Center vertically in zone
-    uint16_t discColor = TFT_WHITE;  // Always white - movement indicates state
+    // ==== Idle state: disc travels across screen ====
+    int cx = idleDiscX;
+    int cy = zoneH / 2;
+    uint16_t discColor = TFT_WHITE;
 
     npSprite.drawCircle(cx, cy, STATUS_DISC_RADIUS, discColor);
     npSprite.fillCircle(cx, cy, STATUS_DISC_INNER, discColor);
 
-    // Always draw spinning triangles (using current discFrame)
     float angle = (discFrame * 5.625) * PI / 180.0;
     int t1x1 = cx + (int)(3 * cos(angle));
     int t1y1 = cy + (int)(3 * sin(angle));
@@ -475,38 +588,6 @@ void drawNowPlaying() {
     int t2x3 = cx + (int)(6 * cos(angle2 + 0.4));
     int t2y3 = cy + (int)(6 * sin(angle2 + 0.4));
     npSprite.fillTriangle(t2x1, t2y1, t2x2, t2y2, t2x3, t2y3, discColor);
-  }
-
-  // Draw scrolling text if active (directly to npSprite with clipping)
-  if (nowPlayingActive && nowPlayingSong.length() > 0) {
-
-    String fullText = nowPlayingSong;
-    if (nowPlayingArtist.length() > 0) {
-      fullText += " - " + nowPlayingArtist;
-    }
-    fullText += "    ";  // Gap before repeat
-
-    // Calculate text width in pixels
-    int textWidth = npSprite.textWidth(fullText);
-
-    // Wrap scroll position when we've scrolled past the full text
-    int scrollPixel = nowPlayingScrollPixel % textWidth;
-
-    // Set viewport to clip text to the text zone (after disc icon)
-    npSprite.setViewport(textZoneX, 0, textZoneW, zoneH);
-
-    // Draw text at offset (coordinates are now relative to viewport)
-    int textX = -scrollPixel;
-    npSprite.setTextColor(COLOR_NOW_PLAYING);
-    npSprite.drawString(fullText, textX, STATUS_TEXT_Y);
-
-    // Draw second copy for seamless wrap
-    if (textX + textWidth < textZoneW) {
-      npSprite.drawString(fullText, textX + textWidth, STATUS_TEXT_Y);
-    }
-
-    // Reset viewport to full sprite
-    npSprite.resetViewport();
   }
 
 #if DEBUG_SHOW_ZONES
@@ -583,6 +664,7 @@ void updateNowPlayingTicker() {
   }
 }
 
+
 // ==================== Main Refresh ====================
 void refreshScreen() {
   // Title zone
@@ -614,7 +696,7 @@ void refreshScreen() {
     if (isZoneDirty(ZONE_CONTENT2)) clearZone(ZONE_CONTENT2);
     if (isZoneDirty(ZONE_CONTENT3)) clearZone(ZONE_CONTENT3);
 
-    // Draw content
+    // Normal content drawing
     if (currentScreen == SCREEN_NOTIFS) {
       drawNotifContent();
     } else {

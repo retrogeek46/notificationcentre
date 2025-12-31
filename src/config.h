@@ -69,7 +69,7 @@
 #define GPU_TEMP_WARN 75               // Flash red if GPU temp exceeds this
 
 // ===== Album Art Configuration =====
-#define ALBUM_ART_SIZE 18              // 18x18 pixels to fit status zone
+#define ALBUM_ART_SIZE 18              // 18x18 pixels for status zone (with 1px border = 20px)
 
 // ===== NTP Configuration =====
 #define NTP_TIMEZONE_OFFSET (5.5 * 3600)  // IST +5:30
@@ -84,7 +84,7 @@
 
 // PC Stats colors (matching scrolling text color)
 #define COLOR_CPU    TFT_GREEN
-#define COLOR_GPU    TFT_LIGHTGREY
+#define COLOR_GPU    TFT_ORANGE
 #define COLOR_RAM    TFT_GOLD
 #define COLOR_NET    TFT_SKYBLUE
 #define COLOR_SEP    TFT_PURPLE
