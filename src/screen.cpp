@@ -457,6 +457,11 @@ void drawNowPlaying() {
     if (nowPlayingArtist.length() > 0) {
       fullText += " - " + nowPlayingArtist;
     }
+
+    // Pad to minimum length if smaller (user request for better spacing)
+    while (fullText.length() < NOW_PLAYING_MIN_CHARS) {
+      fullText += " ";
+    }
     fullText += "    ";  // Gap before repeat
 
     // Calculate total content width (art box + gap + text)
@@ -469,26 +474,28 @@ void drawNowPlaying() {
     // First copy position
     int contentX = -scrollPixel;
 
-    // Draw first copy (art + text)
-    // Art box with variable width
-    npSprite.drawRect(contentX, 0, boxW, boxH, TFT_WHITE);
-    npSprite.pushImage(contentX + artInnerOffset, artInnerOffset, artW, artH, albumArt);
-    // Text after art
-    npSprite.setTextColor(COLOR_NOW_PLAYING);
-    npSprite.drawString(fullText, contentX + boxW + artTextGap, STATUS_TEXT_Y);
+    // Draw as many copies as needed to fill the zone width (seamless scrolling)
+    int drawX = contentX;
+    while (drawX < zoneW) {
+      // Art box with variable width
+      npSprite.drawRect(drawX, 0, boxW, boxH, TFT_WHITE);
+      npSprite.pushImage(drawX + artInnerOffset, artInnerOffset, artW, artH, albumArt);
+      // Text after art
+      npSprite.setTextColor(COLOR_NOW_PLAYING);
+      npSprite.drawString(fullText, drawX + boxW + artTextGap, STATUS_TEXT_Y);
 
-    // Second copy for seamless wrap
-    int secondX = contentX + totalWidth;
-    if (secondX < zoneW) {
-      npSprite.drawRect(secondX, 0, boxW, boxH, TFT_WHITE);
-      npSprite.pushImage(secondX + artInnerOffset, artInnerOffset, artW, artH, albumArt);
-      npSprite.drawString(fullText, secondX + boxW + artTextGap, STATUS_TEXT_Y);
+      drawX += totalWidth;
     }
   } else if (nowPlayingActive && nowPlayingSong.length() > 0) {
     // ==== Disc + text scroll together (no album art) ====
     String fullText = nowPlayingSong;
     if (nowPlayingArtist.length() > 0) {
       fullText += " - " + nowPlayingArtist;
+    }
+
+    // Pad to minimum length if smaller
+    while (fullText.length() < NOW_PLAYING_MIN_CHARS) {
+      fullText += " ";
     }
     fullText += "    ";
 
@@ -505,62 +512,41 @@ void drawNowPlaying() {
 
     // First copy position
     int contentX = -scrollPixel;
-
-    // Draw first copy (disc + text)
-    int cx = contentX + STATUS_DISC_RADIUS + 1;
-    int cy = zoneH / 2;
     uint16_t discColor = TFT_WHITE;
+    int cy = zoneH / 2;
 
-    // Spinning disc
-    float angle = (discFrame * 5.625) * PI / 180.0;
-    npSprite.drawCircle(cx, cy, STATUS_DISC_RADIUS, discColor);
-    npSprite.fillCircle(cx, cy, STATUS_DISC_INNER, discColor);
+    // Draw as many copies as needed (seamless scrolling)
+    int drawX = contentX;
+    while (drawX < zoneW) {
+      int cx = drawX + STATUS_DISC_RADIUS + 1;
 
-    int t1x1 = cx + (int)(3 * cos(angle));
-    int t1y1 = cy + (int)(3 * sin(angle));
-    int t1x2 = cx + (int)(6 * cos(angle - 0.4));
-    int t1y2 = cy + (int)(6 * sin(angle - 0.4));
-    int t1x3 = cx + (int)(6 * cos(angle + 0.4));
-    int t1y3 = cy + (int)(6 * sin(angle + 0.4));
-    npSprite.fillTriangle(t1x1, t1y1, t1x2, t1y2, t1x3, t1y3, discColor);
+      // Spinning disc
+      float angle = (discFrame * 5.625) * PI / 180.0;
+      npSprite.drawCircle(cx, cy, STATUS_DISC_RADIUS, discColor);
+      npSprite.fillCircle(cx, cy, STATUS_DISC_INNER, discColor);
 
-    float angle2 = angle + PI;
-    int t2x1 = cx + (int)(3 * cos(angle2));
-    int t2y1 = cy + (int)(3 * sin(angle2));
-    int t2x2 = cx + (int)(6 * cos(angle2 - 0.4));
-    int t2y2 = cy + (int)(6 * sin(angle2 - 0.4));
-    int t2x3 = cx + (int)(6 * cos(angle2 + 0.4));
-    int t2y3 = cy + (int)(6 * sin(angle2 + 0.4));
-    npSprite.fillTriangle(t2x1, t2y1, t2x2, t2y2, t2x3, t2y3, discColor);
+      int t1x1 = cx + (int)(3 * cos(angle));
+      int t1y1 = cy + (int)(3 * sin(angle));
+      int t1x2 = cx + (int)(6 * cos(angle - 0.4));
+      int t1y2 = cy + (int)(6 * sin(angle - 0.4));
+      int t1x3 = cx + (int)(6 * cos(angle + 0.4));
+      int t1y3 = cy + (int)(6 * sin(angle + 0.4));
+      npSprite.fillTriangle(t1x1, t1y1, t1x2, t1y2, t1x3, t1y3, discColor);
 
-    // Text after disc
-    npSprite.setTextColor(COLOR_NOW_PLAYING);
-    npSprite.drawString(fullText, contentX + discBoxSize + discTextGap, STATUS_TEXT_Y);
+      float angle2 = angle + PI;
+      int t2x1 = cx + (int)(3 * cos(angle2));
+      int t2y1 = cy + (int)(3 * sin(angle2));
+      int t2x2 = cx + (int)(6 * cos(angle2 - 0.4));
+      int t2y2 = cy + (int)(6 * sin(angle2 - 0.4));
+      int t2x3 = cx + (int)(6 * cos(angle2 + 0.4));
+      int t2y3 = cy + (int)(6 * sin(angle2 + 0.4));
+      npSprite.fillTriangle(t2x1, t2y1, t2x2, t2y2, t2x3, t2y3, discColor);
 
-    // Second copy for seamless wrap
-    int secondX = contentX + totalWidth;
-    if (secondX < zoneW) {
-      int cx2 = secondX + STATUS_DISC_RADIUS + 1;
-      npSprite.drawCircle(cx2, cy, STATUS_DISC_RADIUS, discColor);
-      npSprite.fillCircle(cx2, cy, STATUS_DISC_INNER, discColor);
+      // Text after disc
+      npSprite.setTextColor(COLOR_NOW_PLAYING);
+      npSprite.drawString(fullText, drawX + discBoxSize + discTextGap, STATUS_TEXT_Y);
 
-      int s1x1 = cx2 + (int)(3 * cos(angle));
-      int s1y1 = cy + (int)(3 * sin(angle));
-      int s1x2 = cx2 + (int)(6 * cos(angle - 0.4));
-      int s1y2 = cy + (int)(6 * sin(angle - 0.4));
-      int s1x3 = cx2 + (int)(6 * cos(angle + 0.4));
-      int s1y3 = cy + (int)(6 * sin(angle + 0.4));
-      npSprite.fillTriangle(s1x1, s1y1, s1x2, s1y2, s1x3, s1y3, discColor);
-
-      int s2x1 = cx2 + (int)(3 * cos(angle2));
-      int s2y1 = cy + (int)(3 * sin(angle2));
-      int s2x2 = cx2 + (int)(6 * cos(angle2 - 0.4));
-      int s2y2 = cy + (int)(6 * sin(angle2 - 0.4));
-      int s2x3 = cx2 + (int)(6 * cos(angle2 + 0.4));
-      int s2y3 = cy + (int)(6 * sin(angle2 + 0.4));
-      npSprite.fillTriangle(s2x1, s2y1, s2x2, s2y2, s2x3, s2y3, discColor);
-
-      npSprite.drawString(fullText, secondX + discBoxSize + discTextGap, STATUS_TEXT_Y);
+      drawX += totalWidth;
     }
   } else {
     // ==== Idle state: disc travels across screen ====

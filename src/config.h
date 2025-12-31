@@ -62,6 +62,7 @@
 #define IDLE_DISC_TRAVEL_SPEED 60      // ms between horizontal movement steps (idle mode)
 #define NOW_PLAYING_TEXT_X 22          // Text start X (after disc icon)
 #define NOW_PLAYING_TEXT_WIDTH 298     // Available width for text (320 - 22)
+#define NOW_PLAYING_MIN_CHARS 25       // Minimum characters for track info (pads with spaces)
 
 // ===== PC Stats Configuration =====
 #define PC_STATS_TIMEOUT 3000          // ms - show idle if no stats for this long
