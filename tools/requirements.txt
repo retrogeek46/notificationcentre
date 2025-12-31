@@ -1,7 +1,8 @@
-# Media session access
-winrt-runtime
-winrt-Windows.Media.Control
-winrt-Windows.Foundation
+# Media session access (winsdk works better with async)
+winsdk
+
+# Image processing
+Pillow      # Album art resizing
 
 # HTTP requests
 requests

@@ -31,6 +31,11 @@ extern int idleDiscDirection;          // 1 = right, -1 = left
 extern unsigned long lastIdleDiscMove; // Last idle disc position update
 extern bool nowPlayingActive;          // Is music currently playing?
 
+// ==================== Album Art ====================
+#define ALBUM_ART_PIXELS (ALBUM_ART_SIZE * ALBUM_ART_SIZE)  // 324 pixels
+extern uint16_t albumArt[ALBUM_ART_PIXELS];  // RGB565 buffer (648 bytes)
+extern bool albumArtValid;          // True when buffer has valid art
+
 // ==================== PC Stats (Gaming Mode) ====================
 extern bool gamingMode;                // Is gaming mode active?
 extern int pcCpuTemp;                  // CPU temperature in °C

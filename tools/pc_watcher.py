@@ -18,19 +18,25 @@ Usage: pythonw pc_watcher.py  (hidden window)
 """
 
 import asyncio
+import base64
+import io
 import logging
 import os
+import struct
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
 
 import psutil
 import requests
+from PIL import Image
 
-# Windows Media Session API
-from winrt.windows.media.control import (
+# Windows Media Session API (using winsdk - works better with async)
+from winsdk.windows.media.control import (
     GlobalSystemMediaTransportControlsSessionManager as MediaManager,
     GlobalSystemMediaTransportControlsSessionPlaybackStatus as PlaybackStatus,
 )
+from winsdk.windows.storage.streams import Buffer, InputStreamOptions, DataReader
 
 # NVIDIA GPU monitoring (fallback if LHM GPU fails)
 try:
@@ -66,6 +72,10 @@ ESP32_GAMING_URL = f"http://{ESP32_IP}/gaming"
 POLL_INTERVAL = 0.25  # seconds - fast for media detection
 STATS_INTERVAL = 1.0  # seconds - slower for PC stats
 REQUEST_TIMEOUT = 2   # seconds
+
+# Album art settings
+ALBUM_ART_SIZE = 18  # 18x18 pixels to fit ESP32 status zone
+ALBUM_ART_ENABLED = False  # Disabled - open_read_async blocks in persistent event loop
 
 # Paths
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -300,6 +310,9 @@ class PCWatcher:
         self.last_artist = ""
         self.last_playing = False
         self.session_mgr = None
+        # Album art cache (avoid re-extracting for same song)
+        self._cached_art = ""
+        self._cached_song_key = ""
 
         # Network speed tracking
         self.last_net_recv = 0
@@ -351,38 +364,163 @@ class PCWatcher:
 
     # ==================== Media Watching ====================
 
+    # Thread pool for album art extraction (WinRT blocks async loop)
+    _art_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="AlbumArt")
+
+    def _extract_album_art_sync(self, thumbnail_ref) -> str:
+        """Synchronous album art extraction - runs in thread to avoid blocking."""
+        try:
+            log.debug("_extract_album_art_sync: starting in thread")
+
+            # Create a new event loop for this thread
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+            try:
+                # Open stream (blocking await in this thread's loop)
+                log.debug("_extract_album_art_sync: opening stream...")
+                stream = loop.run_until_complete(thumbnail_ref.open_read_async())
+                log.debug("_extract_album_art_sync: stream opened")
+
+                # Read data
+                from winrt.windows.storage.streams import Buffer
+                size = stream.size
+                log.debug(f"_extract_album_art_sync: size = {size}")
+
+                if size == 0 or size > 10 * 1024 * 1024:
+                    stream.close()
+                    return ""
+
+                buffer = Buffer(size)
+                loop.run_until_complete(stream.read_async(buffer, size, InputStreamOptions.READ_AHEAD))
+                stream.close()
+                log.debug("_extract_album_art_sync: buffer read")
+
+                # Convert to bytes
+                data_reader = DataReader.from_buffer(buffer)
+                byte_array = bytearray(size)
+                data_reader.read_bytes(byte_array)
+                data_reader.close()
+
+            finally:
+                loop.close()
+
+            # PIL processing (no async needed)
+            log.debug("_extract_album_art_sync: processing with PIL...")
+            img = Image.open(io.BytesIO(byte_array))
+            img = img.convert("RGB")
+            img = img.resize((ALBUM_ART_SIZE, ALBUM_ART_SIZE), Image.Resampling.LANCZOS)
+
+            # Convert to RGB565
+            rgb565_data = bytearray()
+            for y in range(ALBUM_ART_SIZE):
+                for x in range(ALBUM_ART_SIZE):
+                    r, g, b = img.getpixel((x, y))
+                    rgb565 = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3)
+                    rgb565_data.extend(struct.pack(">H", rgb565))
+
+            art_b64 = base64.b64encode(rgb565_data).decode("ascii")
+            log.debug(f"_extract_album_art_sync: complete, {len(art_b64)} chars")
+            return art_b64
+
+        except Exception as e:
+            log.debug(f"_extract_album_art_sync: FAILED - {e}")
+            return ""
+
     async def get_media_info(self):
-        """Get current media session info."""
+        """Get current media session info including album art."""
         try:
             if not self.session_mgr:
                 self.session_mgr = await MediaManager.request_async()
                 log.debug("Media session manager initialized")
 
+            log.debug("Getting current session...")
             session = self.session_mgr.get_current_session()
             if not session:
-                return None, None, False
+                log.debug("No session")
+                return None, None, False, ""
 
+            log.debug("Getting playback info...")
             playback_info = session.get_playback_info()
             is_playing = playback_info.playback_status == PlaybackStatus.PLAYING
+            log.debug(f"is_playing = {is_playing}")
 
+            # Early return if not playing - skip expensive property fetch
+            if not is_playing:
+                return None, None, False, ""
+
+            log.debug("Getting media properties...")
             props = await session.try_get_media_properties_async()
             title = props.title or ""
             artist = props.artist or ""
+            log.debug(f"title = {title[:30]}...")
 
-            return title, artist, is_playing
+            # Album art extraction using winsdk
+            art_b64 = ""
+            if ALBUM_ART_ENABLED:
+                song_key = f"{title}|{artist}"
+                
+                # Check cache first
+                if song_key == self._cached_song_key and self._cached_art:
+                    art_b64 = self._cached_art
+                    log.debug("Using cached art")
+                elif props.thumbnail:
+                    try:
+                        log.debug("Opening thumbnail stream...")
+                        thumb_stream_ref = props.thumbnail
+                        readable_stream = await thumb_stream_ref.open_read_async()
+                        log.debug(f"Stream opened, size = {readable_stream.size}")
+                        
+                        buffer = Buffer(readable_stream.size)
+                        log.debug("Reading stream...")
+                        await readable_stream.read_async(buffer, buffer.capacity, InputStreamOptions.NONE)
+                        log.debug("Stream read complete")
+                        
+                        reader = DataReader.from_buffer(buffer)
+                        byte_array = bytearray(readable_stream.size)
+                        reader.read_bytes(byte_array)
+                        
+                        # Resize with PIL
+                        log.debug("Processing with PIL...")
+                        img = Image.open(io.BytesIO(byte_array))
+                        img = img.convert("RGB")
+                        img = img.resize((ALBUM_ART_SIZE, ALBUM_ART_SIZE), Image.Resampling.LANCZOS)
+                        
+                        # Convert to RGB565
+                        rgb565_data = bytearray()
+                        for y in range(ALBUM_ART_SIZE):
+                            for x in range(ALBUM_ART_SIZE):
+                                r, g, b = img.getpixel((x, y))
+                                rgb565 = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3)
+                                rgb565_data.extend(struct.pack(">H", rgb565))
+                        
+                        art_b64 = base64.b64encode(rgb565_data).decode("ascii")
+                        
+                        # Cache on success
+                        self._cached_song_key = song_key
+                        self._cached_art = art_b64
+                        log.debug(f"Album art extracted: {len(art_b64)} chars")
+                        
+                    except Exception as e:
+                        log.debug(f"Album art extraction failed: {e}")
+
+            return title, artist, is_playing, art_b64
 
         except Exception as e:
             log.error(f"Error getting media info: {e}", exc_info=True)
-            return None, None, False
+            return None, None, False, ""
 
-    def send_now_playing(self, song: str, artist: str):
+    def send_now_playing(self, song: str, artist: str, art: str = ""):
         """Send now playing info to ESP32."""
         try:
             data = {"song": song, "artist": artist}
+            if art:
+                data["art"] = art
             response = requests.post(ESP32_NOWPLAYING_URL, data=data, timeout=REQUEST_TIMEOUT)
             if response.status_code == 200:
                 if song:
-                    log.info(f"PLAYING: {song} - {artist}")
+                    art_status = "(+art)" if art else "(no art)"
+                    log.info(f"PLAYING: {song} - {artist} {art_status}")
                 else:
                     log.info("PAUSED: Cleared display")
             else:
@@ -545,14 +683,14 @@ class PCWatcher:
 
             # Watch media when not gaming
             if not self.gaming_mode:
-                song, artist, is_playing = await self.get_media_info()
+                song, artist, is_playing, art = await self.get_media_info()
 
                 song_changed = (song != self.last_song or artist != self.last_artist)
                 state_changed = (is_playing != self.last_playing)
 
                 if song_changed or state_changed:
                     if is_playing and song:
-                        self.send_now_playing(song, artist)
+                        self.send_now_playing(song, artist, art)
                     elif not is_playing and self.last_playing:
                         self.send_now_playing("", "")
 

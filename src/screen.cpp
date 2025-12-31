@@ -439,33 +439,43 @@ void drawNowPlaying() {
   // Prepare background (sprite or solid fill based on SPRITE_BG_ENABLED)
   prepareZoneSprite(npSprite, SPRITE_STATUS, SPRITE_STATUS_WIDTH, SPRITE_STATUS_HEIGHT);
 
-  // Draw disc icon to sprite - always spinning, color depends on state
-  // When idle, disc travels across the zone; when playing, stays at fixed position
-  int cx = nowPlayingActive ? STATUS_DISC_CX : idleDiscX;
-  int cy = zoneH / 2;  // Center vertically in zone
-  uint16_t discColor = TFT_WHITE;  // Always white - movement indicates state
+  // Album art position (1px padding from top)
+  const int artX = 1;  // Left aligned with padding
+  const int artY = 1;  // 1px from top for centering in 20px zone
 
-  npSprite.drawCircle(cx, cy, STATUS_DISC_RADIUS, discColor);
-  npSprite.fillCircle(cx, cy, STATUS_DISC_INNER, discColor);
+  // Draw album art if playing and valid, otherwise draw disc
+  if (nowPlayingActive && albumArtValid) {
+    // Draw album art directly from buffer
+    npSprite.pushImage(artX, artY, ALBUM_ART_SIZE, ALBUM_ART_SIZE, albumArt);
+  } else {
+    // Draw disc icon - spinning, position depends on state
+    // When idle, disc travels across the zone; when playing (no art), stays at fixed position
+    int cx = nowPlayingActive ? STATUS_DISC_CX : idleDiscX;
+    int cy = zoneH / 2;  // Center vertically in zone
+    uint16_t discColor = TFT_WHITE;  // Always white - movement indicates state
 
-  // Always draw spinning triangles (using current discFrame)
-  float angle = (discFrame * 5.625) * PI / 180.0;
-  int t1x1 = cx + (int)(3 * cos(angle));
-  int t1y1 = cy + (int)(3 * sin(angle));
-  int t1x2 = cx + (int)(6 * cos(angle - 0.4));
-  int t1y2 = cy + (int)(6 * sin(angle - 0.4));
-  int t1x3 = cx + (int)(6 * cos(angle + 0.4));
-  int t1y3 = cy + (int)(6 * sin(angle + 0.4));
-  npSprite.fillTriangle(t1x1, t1y1, t1x2, t1y2, t1x3, t1y3, discColor);
+    npSprite.drawCircle(cx, cy, STATUS_DISC_RADIUS, discColor);
+    npSprite.fillCircle(cx, cy, STATUS_DISC_INNER, discColor);
 
-  float angle2 = angle + PI;
-  int t2x1 = cx + (int)(3 * cos(angle2));
-  int t2y1 = cy + (int)(3 * sin(angle2));
-  int t2x2 = cx + (int)(6 * cos(angle2 - 0.4));
-  int t2y2 = cy + (int)(6 * sin(angle2 - 0.4));
-  int t2x3 = cx + (int)(6 * cos(angle2 + 0.4));
-  int t2y3 = cy + (int)(6 * sin(angle2 + 0.4));
-  npSprite.fillTriangle(t2x1, t2y1, t2x2, t2y2, t2x3, t2y3, discColor);
+    // Always draw spinning triangles (using current discFrame)
+    float angle = (discFrame * 5.625) * PI / 180.0;
+    int t1x1 = cx + (int)(3 * cos(angle));
+    int t1y1 = cy + (int)(3 * sin(angle));
+    int t1x2 = cx + (int)(6 * cos(angle - 0.4));
+    int t1y2 = cy + (int)(6 * sin(angle - 0.4));
+    int t1x3 = cx + (int)(6 * cos(angle + 0.4));
+    int t1y3 = cy + (int)(6 * sin(angle + 0.4));
+    npSprite.fillTriangle(t1x1, t1y1, t1x2, t1y2, t1x3, t1y3, discColor);
+
+    float angle2 = angle + PI;
+    int t2x1 = cx + (int)(3 * cos(angle2));
+    int t2y1 = cy + (int)(3 * sin(angle2));
+    int t2x2 = cx + (int)(6 * cos(angle2 - 0.4));
+    int t2y2 = cy + (int)(6 * sin(angle2 - 0.4));
+    int t2x3 = cx + (int)(6 * cos(angle2 + 0.4));
+    int t2y3 = cy + (int)(6 * sin(angle2 + 0.4));
+    npSprite.fillTriangle(t2x1, t2y1, t2x2, t2y2, t2x3, t2y3, discColor);
+  }
 
   // Draw scrolling text if active (directly to npSprite with clipping)
   if (nowPlayingActive && nowPlayingSong.length() > 0) {
@@ -534,11 +544,11 @@ void updateNowPlayingTicker() {
     if (now - lastIdleDiscMove >= IDLE_DISC_TRAVEL_SPEED) {
       // Move disc position
       idleDiscX += idleDiscDirection;
-      
+
       // Calculate bounce boundaries (disc radius from edges)
       const int minX = STATUS_DISC_RADIUS + 2;  // Left edge with margin
       const int maxX = STATUS_ZONE_W - STATUS_DISC_RADIUS - 2;  // Right edge with margin
-      
+
       // Bounce at edges
       if (idleDiscX >= maxX) {
         idleDiscX = maxX;
@@ -547,7 +557,7 @@ void updateNowPlayingTicker() {
         idleDiscX = minX;
         idleDiscDirection = 1;   // Reverse to right
       }
-      
+
       lastIdleDiscMove = now;
       setZoneDirty(ZONE_STATUS);
     }

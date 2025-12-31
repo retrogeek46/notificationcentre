@@ -28,6 +28,10 @@ int idleDiscDirection = 1;       // Start moving right
 unsigned long lastIdleDiscMove = 0;
 bool nowPlayingActive = false;
 
+// ==================== Album Art ====================
+uint16_t albumArt[ALBUM_ART_PIXELS] = {0};
+bool albumArtValid = false;
+
 // ==================== PC Stats (Gaming Mode) ====================
 bool gamingMode = false;
 int pcCpuTemp = 0;
@@ -64,6 +68,9 @@ void initState() {
   idleDiscDirection = 1;
   lastIdleDiscMove = 0;
   nowPlayingActive = false;
+  // Clear album art
+  memset(albumArt, 0, sizeof(albumArt));
+  albumArtValid = false;
   nextReminderId = 1;
 }
 

@@ -116,9 +116,40 @@ void handleCompleteReminder(AsyncWebServerRequest* request) {
 }
 
 // ==================== Now Playing Handler ====================
+// Base64 decoding helper using mbedtls
+#include "mbedtls/base64.h"
+
+static bool decodeAlbumArt(const String& artB64) {
+  if (artB64.length() == 0) {
+    return false;
+  }
+
+  // Expected size: 18x18 pixels * 2 bytes = 648 bytes
+  const size_t expectedSize = ALBUM_ART_PIXELS * 2;
+  size_t outputLen = 0;
+
+  // Decode base64
+  int ret = mbedtls_base64_decode(
+    (unsigned char*)albumArt,
+    sizeof(albumArt),
+    &outputLen,
+    (const unsigned char*)artB64.c_str(),
+    artB64.length()
+  );
+
+  if (ret != 0 || outputLen != expectedSize) {
+    Serial.printf("Album art decode failed: ret=%d, len=%d (expected %d)\n", ret, outputLen, expectedSize);
+    return false;
+  }
+
+  Serial.printf("Album art decoded: %d bytes\n", outputLen);
+  return true;
+}
+
 void handleNowPlaying(AsyncWebServerRequest* request) {
   String song = request->hasParam("song", true) ? request->getParam("song", true)->value() : "";
   String artist = request->hasParam("artist", true) ? request->getParam("artist", true)->value() : "";
+  String artB64 = request->hasParam("art", true) ? request->getParam("art", true)->value() : "";
 
   // If song is empty, clear now playing (but preserve disc frame state)
   if (song.length() == 0) {
@@ -126,6 +157,7 @@ void handleNowPlaying(AsyncWebServerRequest* request) {
     nowPlayingArtist = "";
     nowPlayingActive = false;
     nowPlayingScrollPixel = 0;
+    albumArtValid = false;  // Clear album art
     // Don't reset discFrame - keep current position for resume
     setZoneDirty(ZONE_STATUS);
 
@@ -143,9 +175,13 @@ void handleNowPlaying(AsyncWebServerRequest* request) {
   // Don't reset discFrame - keep spinning from current position
   lastDiscUpdate = millis();
   nowPlayingActive = true;
+
+  // Decode album art if provided
+  albumArtValid = decodeAlbumArt(artB64);
+
   setZoneDirty(ZONE_STATUS);
 
-  Serial.printf("Now Playing: %s - %s\n", song.c_str(), artist.c_str());
+  Serial.printf("Now Playing: %s - %s %s\n", song.c_str(), artist.c_str(), albumArtValid ? "(+art)" : "(no art)");
   request->send(200, "application/json", "{\"status\":\"ok\"}");
 }
 

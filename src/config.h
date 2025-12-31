@@ -59,7 +59,7 @@
 #define NOW_PLAYING_SCROLL_SPEED 50    // ms between scroll steps (20 FPS)
 #define NOW_PLAYING_SCROLL_STEP 1      // pixels to scroll per step
 #define NOW_PLAYING_DISC_SPEED 50      // ms between disc rotation frames (64 frames)
-#define IDLE_DISC_TRAVEL_SPEED 50      // ms between horizontal movement steps (idle mode)
+#define IDLE_DISC_TRAVEL_SPEED 60      // ms between horizontal movement steps (idle mode)
 #define NOW_PLAYING_TEXT_X 22          // Text start X (after disc icon)
 #define NOW_PLAYING_TEXT_WIDTH 298     // Available width for text (320 - 22)
 
@@ -67,6 +67,9 @@
 #define PC_STATS_TIMEOUT 3000          // ms - show idle if no stats for this long
 #define CPU_TEMP_WARN 85               // Flash red if CPU temp exceeds this
 #define GPU_TEMP_WARN 75               // Flash red if GPU temp exceeds this
+
+// ===== Album Art Configuration =====
+#define ALBUM_ART_SIZE 18              // 18x18 pixels to fit status zone
 
 // ===== NTP Configuration =====
 #define NTP_TIMEZONE_OFFSET (5.5 * 3600)  // IST +5:30
@@ -80,11 +83,11 @@
 #define COLOR_ERROR TFT_RED
 
 // PC Stats colors (matching scrolling text color)
-#define COLOR_CPU    TFT_MAGENTA
-#define COLOR_GPU    TFT_MAGENTA
-#define COLOR_RAM    TFT_MAGENTA
-#define COLOR_NET    TFT_MAGENTA
-#define COLOR_SEP    TFT_LIGHTGREY
+#define COLOR_CPU    TFT_GREEN
+#define COLOR_GPU    TFT_LIGHTGREY
+#define COLOR_RAM    TFT_GOLD
+#define COLOR_NET    TFT_SKYBLUE
+#define COLOR_SEP    TFT_PURPLE
 
 // Now Playing color
 #define COLOR_NOW_PLAYING TFT_MAGENTA
