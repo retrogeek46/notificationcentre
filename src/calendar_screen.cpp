@@ -58,17 +58,36 @@ void drawCalendarContent() {
   struct tm tm;
   localtime_r(&now, &tm);
 
-  int curYear = tm.tm_year + 1900;
-  int curMonth = tm.tm_mon; // 0-11
-  int curDay = tm.tm_mday;
+  // Determine which month/year to display
+  int displayMonth, displayYear;
+  int todayDay = tm.tm_mday;  // Actual current day
+  int todayMonth = tm.tm_mon;
+  int todayYear = tm.tm_year + 1900;
 
-  // Calculate first day of month
-  struct tm firstDayTm = tm;
+  if (calViewMonth >= 0 && calViewMonth <= 11) {
+    displayMonth = calViewMonth;
+  } else {
+    displayMonth = todayMonth;
+  }
+
+  if (calViewYear > 0) {
+    displayYear = calViewYear;
+  } else {
+    displayYear = todayYear;
+  }
+
+  // Check if we're viewing the current month (for highlighting today)
+  bool isCurrentMonth = (displayMonth == todayMonth && displayYear == todayYear);
+
+  // Calculate first day of displayed month
+  struct tm firstDayTm = {0};
+  firstDayTm.tm_year = displayYear - 1900;
+  firstDayTm.tm_mon = displayMonth;
   firstDayTm.tm_mday = 1;
   mktime(&firstDayTm);
-  int firstDayOfWeek = firstDayTm.tm_wday; 
+  int firstDayOfWeek = firstDayTm.tm_wday;
   int startOffset = (firstDayOfWeek == 0) ? 6 : (firstDayOfWeek - 1);
-  int daysInMonth = getDaysInMonth(curMonth, curYear);
+  int daysInMonth = getDaysInMonth(displayMonth, displayYear);
 
   // Render Day Headers (Mo Tu We Th...)
   canvas.setFreeFont(&MDIOTrial_Regular9pt7b);
@@ -91,7 +110,8 @@ void drawCalendarContent() {
     int x = CAL_X_START + (col * CAL_COL_W) + CAL_TEXT_X_OFFSET;
     int y = lineY + CAL_GRID_Y_OFFSET + (row * CAL_ROW_H) + CAL_TEXT_Y_OFFSET;
 
-    if (d == curDay) {
+    // Highlight today only if viewing current month
+    if (isCurrentMonth && d == todayDay) {
       canvas.setTextColor(COLOR_CAL_TODAY_TEXT);
       canvas.fillRoundRect(x + CAL_HL_X_OFF, y + CAL_HL_Y_OFF, CAL_HL_W, CAL_HL_H, CAL_HL_ROUND, COLOR_CAL_TODAY_BG);
       canvas.drawString(String(d), x, y);
@@ -105,7 +125,13 @@ void drawCalendarContent() {
   canvas.setFreeFont(&MDIOTrial_Bold10pt7b);
   canvas.setTextColor(COLOR_CAL_TITLE);
   char monthBuf[32];
-  strftime(monthBuf, sizeof(monthBuf), "%B %Y", &tm);
+  // Use the displayed month/year for the title
+  struct tm titleTm = {0};
+  titleTm.tm_year = displayYear - 1900;
+  titleTm.tm_mon = displayMonth;
+  titleTm.tm_mday = 1;
+  mktime(&titleTm);
+  strftime(monthBuf, sizeof(monthBuf), "%B %Y", &titleTm);
   // Title remains at fixed title pos, adjusted for content offset if in sprite
   int titleY = yOffset + (CAL_TITLE_Y - zoneY);
   canvas.drawString(monthBuf, CAL_TITLE_X, titleY);

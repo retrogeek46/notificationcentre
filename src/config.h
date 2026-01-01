@@ -115,7 +115,7 @@
 #define COLOR_NOW_PLAYING TFT_MAGENTA
 
 // Calendar Colors
-#define COLOR_CAL_TITLE       TFT_CYAN    // Month/Year text
+#define COLOR_CAL_TITLE       TFT_ORANGE    // Month/Year text
 #define COLOR_CAL_DAY_HEADER  TFT_YELLOW    // Mo, Tu, We... text
 #define COLOR_CAL_DATE        TFT_WHITE       // Standard date numbers
 #define COLOR_CAL_TODAY_BG    COLOR_HEADER    // Today's highlight box color

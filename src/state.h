@@ -52,6 +52,10 @@ extern float pcNetDown;                // Download speed in Mbps
 extern float pcNetUp;                  // Upload speed in Mbps
 extern unsigned long pcStatsUpdated;   // Last update timestamp
 
+// ==================== Calendar View ====================
+extern int calViewMonth;               // Month to display (0-11), -1 = current
+extern int calViewYear;                // Year to display, 0 = current
+
 // ==================== Helper Functions ====================
 void initState();
 void setZoneDirty(Zone zone);

@@ -47,6 +47,10 @@ float pcNetDown = 0.0;
 float pcNetUp = 0.0;
 unsigned long pcStatsUpdated = 0;
 
+// ==================== Calendar View ====================
+int calViewMonth = -1;   // -1 = current month
+int calViewYear = 0;     // 0 = current year
+
 // ==================== Helper Functions ====================
 void initState() {
   currentScreen = SCREEN_NOTIFS;
@@ -74,6 +78,9 @@ void initState() {
   memset(albumArt, 0, sizeof(albumArt));
   albumArtValid = false;
   nextReminderId = 1;
+  // Reset calendar view to current month
+  calViewMonth = -1;
+  calViewYear = 0;
 }
 
 void setZoneDirty(Zone zone) {

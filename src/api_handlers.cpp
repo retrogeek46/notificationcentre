@@ -32,6 +32,9 @@ void setupApiRoutes() {
   server.on("/gaming", HTTP_POST, handleGamingMode);
   server.on("/pcstats", HTTP_POST, handlePcStats);
 
+  // Calendar month
+  server.on("/calmonth", HTTP_POST, handleCalendarMonth);
+
   // Root
   server.on("/", HTTP_GET, handleRoot);
 
@@ -256,6 +259,7 @@ void handleRoot(AsyncWebServerRequest* request) {
   html += "<p>Use <b>/motor</b> POST with speed=0..255</p>";
   html += "<p>Use <b>/gaming</b> POST with enabled=0|1</p>";
   html += "<p>Use <b>/pcstats</b> POST with cpu_temp, cpu_usage, cpu_speed, ram_used, ram_total, gpu_temp, gpu_usage, net_speed</p>";
+  html += "<p>Use <b>/calmonth</b> POST with month=1-12, year=YYYY (0 to reset to current)</p>";
   request->send(200, "text/html", html);
 }
 
@@ -315,4 +319,39 @@ void handlePcStats(AsyncWebServerRequest* request) {
                 pcRamUsed, pcRamTotal, pcNetDown, pcNetUp);
 
   request->send(200, "application/json", "{\"status\":\"ok\"}");
+}
+
+// ==================== Calendar Month Handler ====================
+void handleCalendarMonth(AsyncWebServerRequest* request) {
+  String monthStr = request->hasParam("month", true) ? request->getParam("month", true)->value() : "";
+  String yearStr = request->hasParam("year", true) ? request->getParam("year", true)->value() : "";
+
+  int month = monthStr.toInt();  // 1-12, 0 = reset
+  int year = yearStr.toInt();    // YYYY, 0 = reset
+
+  if (month == 0 && year == 0) {
+    // Reset to current month/year
+    calViewMonth = -1;
+    calViewYear = 0;
+    Serial.println("Calendar: reset to current month");
+  } else {
+    // Validate and set
+    if (month >= 1 && month <= 12) {
+      calViewMonth = month - 1;  // Convert to 0-11
+    }
+    if (year > 0) {
+      calViewYear = year;
+    }
+    Serial.printf("Calendar: set to %d/%d\n", calViewMonth + 1, calViewYear);
+  }
+
+  // Switch to calendar screen if not already on it
+  if (currentScreen != SCREEN_CALENDAR) {
+    currentScreen = SCREEN_CALENDAR;
+    setZoneDirty(ZONE_TITLE);
+  }
+  setAllContentDirty();
+
+  request->send(200, "application/json",
+    "{\"status\":\"ok\",\"month\":" + String(calViewMonth + 1) + ",\"year\":" + String(calViewYear) + "}");
 }
