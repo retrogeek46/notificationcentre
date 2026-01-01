@@ -1,0 +1,20 @@
+meta {
+  name: Change Screen to Calender
+  type: http
+  seq: 6
+}
+
+post {
+  url: http://{{notif_url}}/screen?name=calendar
+  body: none
+  auth: inherit
+}
+
+params:query {
+  name: calendar
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

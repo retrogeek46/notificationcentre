@@ -3,6 +3,7 @@
 #include "config.h"
 #include "notif_screen.h"
 #include "reminder_screen.h"
+#include "calendar_screen.h"
 #include "icons/icons.h"
 #include "fonts/MDIOTrial_Regular8pt7b.h"
 #include "fonts/MDIOTrial_Regular9pt7b.h"
@@ -103,27 +104,37 @@ void clearZone(Zone zone) {
 
 #if SPRITE_BG_ENABLED
   // Push sprite background
-  switch (zone) {
-    case ZONE_TITLE:
-      tft.pushImage(x_start, y_start, SPRITE_TITLE_WIDTH, SPRITE_TITLE_HEIGHT, SPRITE_TITLE);
-      break;
-    case ZONE_CLOCK:
-      tft.pushImage(x_start, y_start, SPRITE_CLOCK_WIDTH, SPRITE_CLOCK_HEIGHT, SPRITE_CLOCK);
-      break;
-    case ZONE_STATUS:
-      tft.pushImage(x_start, y_start, SPRITE_STATUS_WIDTH, SPRITE_STATUS_HEIGHT, SPRITE_STATUS);
-      break;
-    case ZONE_CONTENT1:
-      tft.pushImage(x_start, y_start, SPRITE_CONTENT1_WIDTH, SPRITE_CONTENT1_HEIGHT, SPRITE_CONTENT1);
-      break;
-    case ZONE_CONTENT2:
-      tft.pushImage(x_start, y_start, SPRITE_CONTENT2_WIDTH, SPRITE_CONTENT2_HEIGHT, SPRITE_CONTENT2);
-      break;
-    case ZONE_CONTENT3:
-      tft.pushImage(x_start, y_start, SPRITE_CONTENT3_WIDTH, SPRITE_CONTENT3_HEIGHT, SPRITE_CONTENT3);
-      break;
-    default:
-      break;
+  bool isContentZone = (zone == ZONE_CONTENT1 || zone == ZONE_CONTENT2 || zone == ZONE_CONTENT3);
+
+  // Future: Add custom calendar background here
+  // if (currentScreen == SCREEN_CALENDAR && isContentZone) {
+  //   tft.pushImage(x_start, y_start, SPRITE_CAL_WIDTH, SPRITE_CAL_HEIGHT, SPRITE_CAL);
+  // } else
+  if (currentScreen == SCREEN_CALENDAR && isContentZone) {
+    tft.fillRect(x_start, y_start, zoneW, zoneH, COLOR_BACKGROUND);
+  } else {
+    switch (zone) {
+      case ZONE_TITLE:
+        tft.pushImage(x_start, y_start, SPRITE_TITLE_WIDTH, SPRITE_TITLE_HEIGHT, SPRITE_TITLE);
+        break;
+      case ZONE_CLOCK:
+        tft.pushImage(x_start, y_start, SPRITE_CLOCK_WIDTH, SPRITE_CLOCK_HEIGHT, SPRITE_CLOCK);
+        break;
+      case ZONE_STATUS:
+        tft.pushImage(x_start, y_start, SPRITE_STATUS_WIDTH, SPRITE_STATUS_HEIGHT, SPRITE_STATUS);
+        break;
+      case ZONE_CONTENT1:
+        tft.pushImage(x_start, y_start, SPRITE_CONTENT1_WIDTH, SPRITE_CONTENT1_HEIGHT, SPRITE_CONTENT1);
+        break;
+      case ZONE_CONTENT2:
+        tft.pushImage(x_start, y_start, SPRITE_CONTENT2_WIDTH, SPRITE_CONTENT2_HEIGHT, SPRITE_CONTENT2);
+        break;
+      case ZONE_CONTENT3:
+        tft.pushImage(x_start, y_start, SPRITE_CONTENT3_WIDTH, SPRITE_CONTENT3_HEIGHT, SPRITE_CONTENT3);
+        break;
+      default:
+        break;
+    }
   }
 #else
   // Clear with solid background color
@@ -180,7 +191,8 @@ void drawTitle() {
   // Overlay text
   titleSprite.setTextSize(1);
   titleSprite.setTextColor(COLOR_HEADER);
-  const char* title = (currentScreen == SCREEN_NOTIFS) ? "NOTIFS" : "REMINDER";
+  const char* title = (currentScreen == SCREEN_NOTIFS) ? "NOTIFS" : 
+                      (currentScreen == SCREEN_REMINDER ? "REMINDER" : "CALENDAR");
   titleSprite.drawString(title, TITLE_TEXT_X, TITLE_TEXT_Y);
 
   // Push to screen
@@ -685,8 +697,10 @@ void refreshScreen() {
     // Normal content drawing
     if (currentScreen == SCREEN_NOTIFS) {
       drawNotifContent();
-    } else {
+    } else if (currentScreen == SCREEN_REMINDER) {
       drawReminderContent();
+    } else {
+      drawCalendarContent();
     }
 
     // Clear all dirty flags

@@ -174,14 +174,11 @@ int addReminder(String msg, time_t when, int limitMins, uint16_t color) {
 bool completeReminder(int id) {
   for (int i = 0; i < MAX_REMINDERS; i++) {
     if (reminders[i].id == id) {
-      reminders[i].completed = true;
-      reminders[i].triggered = false;
-      reminders[i].nextReviewTime = 0;
-      reminders[i].reviewCount = 0;
+      Serial.printf("Reminder %d completed and removed from memory\n", id);
+      reminders[i] = Reminder(); // Reset slot (id becomes 0)
       ledOff();
       setAllContentDirty();
       saveReminders();  // Persist to flash
-      Serial.printf("Reminder %d completed\n", id);
       return true;
     }
   }

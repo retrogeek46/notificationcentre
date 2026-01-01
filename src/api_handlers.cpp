@@ -232,17 +232,17 @@ void handleScreenSwitch(AsyncWebServerRequest* request) {
 
   if (name == "reminder") {
     currentScreen = SCREEN_REMINDER;
-    updateLedForScreen(SCREEN_REMINDER);
+  } else if (name == "calendar") {
+    currentScreen = SCREEN_CALENDAR;
   } else {
     currentScreen = SCREEN_NOTIFS;
-    updateLedForScreen(SCREEN_NOTIFS);
   }
 
   setZoneDirty(ZONE_TITLE);
   setAllContentDirty();
 
   request->send(200, "application/json",
-    "{\"status\":\"ok\",\"screen\":\"" + String((currentScreen == SCREEN_REMINDER) ? "reminder" : "notifs") + "\"}");
+    "{\"status\":\"ok\",\"screen\":\"" + String((currentScreen == SCREEN_REMINDER) ? "reminder" : (currentScreen == SCREEN_CALENDAR ? "calendar" : "notifs")) + "\"}");
 }
 
 // ==================== Root Handler ====================
@@ -251,7 +251,7 @@ void handleRoot(AsyncWebServerRequest* request) {
   html += "<p>Use <b>/addreminder</b> POST to add reminders</p>";
   html += "<p>Use <b>/reminders</b> GET to list reminders</p>";
   html += "<p>Use <b>/completeReminder?id=...</b> POST to mark done</p>";
-  html += "<p>Use <b>/screen?name=notifs|reminder</b> POST to switch</p>";
+  html += "<p>Use <b>/screen?name=notifs|reminder|calendar</b> POST to switch</p>";
   html += "<p>Use <b>/nowplaying</b> POST with song, artist</p>";
   html += "<p>Use <b>/motor</b> POST with speed=0..255</p>";
   html += "<p>Use <b>/gaming</b> POST with enabled=0|1</p>";

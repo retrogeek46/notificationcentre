@@ -63,7 +63,14 @@ void loadReminders() {
   nextReminderId = prefs.getInt("nextId", 1);
 
   // Convert from ReminderStorage to Reminder
+  int loadedCount = 0;
   for (int i = 0; i < MAX_REMINDERS; i++) {
+    // Basic sanitation: check for negative IDs or garbage data
+    if (storage[i].id < 0 || storage[i].id > 100000) {
+      reminders[i] = Reminder();
+      continue;
+    }
+
     reminders[i].id = storage[i].id;
     reminders[i].message = String(storage[i].message);
     reminders[i].when = storage[i].when;
@@ -73,9 +80,11 @@ void loadReminders() {
     reminders[i].triggered = storage[i].triggered;
     reminders[i].nextReviewTime = storage[i].nextReviewTime;
     reminders[i].reviewCount = storage[i].reviewCount;
+
+    if (reminders[i].id != 0) loadedCount++;
   }
 
-  Serial.printf("Loaded %d reminders from flash, nextId=%d\n", MAX_REMINDERS, nextReminderId);
+  Serial.printf("Loaded %d reminders from flash, nextId=%d\n", loadedCount, nextReminderId);
 }
 
 void clearStoredReminders() {

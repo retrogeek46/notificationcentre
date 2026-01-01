@@ -41,7 +41,7 @@
 
 // ===== Display Limits =====
 #define MAX_NOTIFICATIONS 5
-#define MAX_REMINDERS 10
+#define MAX_REMINDERS 50
 
 // ===== Text Truncation Limits =====
 #define NOTIF_SENDER_MAX_CHARS 24
@@ -72,6 +72,27 @@
 // ===== Album Art Configuration =====
 #define ALBUM_ART_SIZE 18              // 18x18 pixels for status zone (with 1px border = 20px)
 
+// ===== Calendar Layout Configuration =====
+// Header / Title (Month Year)
+#define CAL_TITLE_X 5          // X position for title (top left)
+#define CAL_TITLE_Y 45         // Y position for title (top left of content zone + padding)
+
+#define CAL_X_START 5          // Left margin for the whole calendar
+#define CAL_Y_HEADER 25        // Y padding for day headers (Mo, Tu...)
+#define CAL_COL_W 47           // Width of each day column
+#define CAL_ROW_H 30           // Height of each date row
+#define CAL_SEP_Y_OFFSET 10    // Vertical offset for the bg separator line from header Y
+#define CAL_GRID_Y_OFFSET 15   // Start of the date grid below the separator line
+#define CAL_TEXT_X_OFFSET 2    // Fine-tuning X position of text within a cell
+#define CAL_TEXT_Y_OFFSET 0    // Fine-tuning Y position of text within a cell
+
+// Highlight Box (Today's date)
+#define CAL_HL_W 30            // Width of the highlight box
+#define CAL_HL_H 26            // Height of the highlight box
+#define CAL_HL_X_OFF -2        // X offset for highlight box alignment
+#define CAL_HL_Y_OFF -4        // Y offset for highlight box alignment
+#define CAL_HL_ROUND 4         // Corner radius of the highlight box
+
 // ===== NTP Configuration =====
 #define NTP_TIMEZONE_OFFSET (5.5 * 3600)  // IST +5:30
 
@@ -92,6 +113,13 @@
 
 // Now Playing color
 #define COLOR_NOW_PLAYING TFT_MAGENTA
+
+// Calendar Colors
+#define COLOR_CAL_TITLE       TFT_CYAN    // Month/Year text
+#define COLOR_CAL_DAY_HEADER  TFT_YELLOW    // Mo, Tu, We... text
+#define COLOR_CAL_DATE        TFT_WHITE       // Standard date numbers
+#define COLOR_CAL_TODAY_BG    COLOR_HEADER    // Today's highlight box color
+#define COLOR_CAL_TODAY_TEXT  TFT_BLACK       // Date number color inside today's highlight
 
 // Notification colors
 #define COLOR_NOTIF_MSG TFT_LIGHTGREY

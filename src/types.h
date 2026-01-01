@@ -57,7 +57,8 @@ const int ZONE_CONTENT3_Y_END = 239;
 // ==================== Screen Types ====================
 enum Screen {
   SCREEN_NOTIFS = 0,
-  SCREEN_REMINDER = 1
+  SCREEN_REMINDER = 1,
+  SCREEN_CALENDAR = 2
 };
 
 // ==================== Notification ====================
