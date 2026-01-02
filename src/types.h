@@ -16,44 +16,6 @@ enum Zone {
   ZONE_COUNT = 6
 };
 
-// Zone boundaries (zones extend to screen edges)
-// Title zone: 0-105 x 0-24
-const int ZONE_TITLE_X_START = 0;
-const int ZONE_TITLE_X_END = 105;
-const int ZONE_TITLE_Y_START = 0;
-const int ZONE_TITLE_Y_END = 24;
-
-// Clock zone: 106-319 x 0-24
-const int ZONE_CLOCK_X_START = 106;
-const int ZONE_CLOCK_X_END = 319;
-const int ZONE_CLOCK_Y_START = 0;
-const int ZONE_CLOCK_Y_END = 24;
-
-// Status zone: 0-319 x 25-44
-const int ZONE_STATUS_X_START = 0;
-const int ZONE_STATUS_X_END = 319;
-const int ZONE_STATUS_Y_START = 25;
-const int ZONE_STATUS_Y_END = 44;
-
-// Content zones (3 slots of 65px each)
-// Content1: 0-319 x 45-109
-const int ZONE_CONTENT1_X_START = 0;
-const int ZONE_CONTENT1_X_END = 319;
-const int ZONE_CONTENT1_Y_START = 45;
-const int ZONE_CONTENT1_Y_END = 109;
-
-// Content2: 0-319 x 110-174
-const int ZONE_CONTENT2_X_START = 0;
-const int ZONE_CONTENT2_X_END = 319;
-const int ZONE_CONTENT2_Y_START = 110;
-const int ZONE_CONTENT2_Y_END = 174;
-
-// Content3: 0-319 x 175-239
-const int ZONE_CONTENT3_X_START = 0;
-const int ZONE_CONTENT3_X_END = 319;
-const int ZONE_CONTENT3_Y_START = 175;
-const int ZONE_CONTENT3_Y_END = 239;
-
 // ==================== Screen Types ====================
 enum Screen {
   SCREEN_NOTIFS = 0,

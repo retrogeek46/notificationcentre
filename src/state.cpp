@@ -1,7 +1,7 @@
 #include "state.h"
 
 // ==================== Screen State ====================
-Screen currentScreen = SCREEN_NOTIFS;
+Screen currentScreen = DEFAULT_SCREEN;
 bool zoneDirty[ZONE_COUNT] = {true, true, true, true, true, true};
 
 // ==================== Timing ====================
@@ -53,7 +53,7 @@ int calViewYear = 0;     // 0 = current year
 
 // ==================== Helper Functions ====================
 void initState() {
-  currentScreen = SCREEN_NOTIFS;
+  currentScreen = DEFAULT_SCREEN;
   for (int i = 0; i < ZONE_COUNT; i++) {
     zoneDirty[i] = true;
   }

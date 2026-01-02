@@ -26,8 +26,10 @@ void checkButtons() {
 
       // Button pressed (HIGH -> LOW transition)
       if (currentState == LOW) {
-        Serial.println("Button: Clear Notifications");
+        Serial.println("Button: Clear Notifications + Switch to Default Screen");
         clearAllNotifications();
+        currentScreen = DEFAULT_SCREEN;
+        setAllZonesDirty();
       }
 
       lastBtnClearNotifs = currentState;

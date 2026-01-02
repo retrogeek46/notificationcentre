@@ -6,3 +6,4 @@
 .vscode/settings.json
 *.log*
 notifcentre*
+tools/__pycache__
