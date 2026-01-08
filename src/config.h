@@ -60,7 +60,7 @@
 
 // Motor PWM settings
 #define MOTOR_PWM_CHANNEL 0
-#define MOTOR_PWM_FREQ    1000   // 1 kHz
+#define MOTOR_PWM_FREQ    20000  // 20 kHz (above audible range for N20 motors)
 #define MOTOR_PWM_RES     8      // 8-bit = 0-255
 
 // Button pins (input-only GPIOs, external pull-up required)

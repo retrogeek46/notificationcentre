@@ -168,7 +168,7 @@ static const int TITLE_TEXT_X = 5;
 static const int TITLE_TEXT_Y = 5;
 
 // Clock zone text position
-static const int CLOCK_TEXT_X = 5;
+static const int CLOCK_TEXT_X = 0;
 static const int CLOCK_TEXT_Y = 5;
 
 // ==================== Title Zone ====================
@@ -317,14 +317,14 @@ void drawPcStats() {
   }
   npSprite.setTextColor(cpuTempColor);
   char cpuTempStr[8];
-  snprintf(cpuTempStr, sizeof(cpuTempStr), "%dc ", pcCpuTemp);
+  snprintf(cpuTempStr, sizeof(cpuTempStr), "%02dc ", pcCpuTemp);
   npSprite.drawString(cpuTempStr, x, y);
   x += npSprite.textWidth(cpuTempStr);
 
   // Draw CPU usage and speed (always orange)
   npSprite.setTextColor(COLOR_CPU);
   char cpuRestStr[16];
-  snprintf(cpuRestStr, sizeof(cpuRestStr), " %d%% %.1fGHz", pcCpuUsage, pcCpuSpeed);
+  snprintf(cpuRestStr, sizeof(cpuRestStr), " %02d%% %.1fGHz", pcCpuUsage, pcCpuSpeed);
   npSprite.drawString(cpuRestStr, x, y);
   x += npSprite.textWidth(cpuRestStr);
 
@@ -365,14 +365,14 @@ void drawPcStats() {
   uint16_t gpuTempColor = (gpuOverheat && flashOn) ? TFT_RED : COLOR_GPU;
   npSprite.setTextColor(gpuTempColor);
   char gpuTempStr[8];
-  snprintf(gpuTempStr, sizeof(gpuTempStr), "%dc ", pcGpuTemp);
+  snprintf(gpuTempStr, sizeof(gpuTempStr), "%02dc ", pcGpuTemp);
   npSprite.drawString(gpuTempStr, x, y);
   x += npSprite.textWidth(gpuTempStr);
 
   // Draw GPU usage (always magenta)
   npSprite.setTextColor(COLOR_GPU);
   char gpuUsageStr[8];
-  snprintf(gpuUsageStr, sizeof(gpuUsageStr), " %d%%", pcGpuUsage);
+  snprintf(gpuUsageStr, sizeof(gpuUsageStr), " %02d%%", pcGpuUsage);
   npSprite.drawString(gpuUsageStr, x, y);
   x += npSprite.textWidth(gpuUsageStr);
 

@@ -20,10 +20,22 @@ void initMotor() {
 
 void setMotorRaw(int speed) {
   speed = constrain(speed, 0, 255);
+  
+  // Soft ramp to target speed (prevents motor jumping)
+  int currentPWM = motorSpeed;
+  int step = (speed > currentPWM) ? 5 : -5;
+  
+  while (currentPWM != speed) {
+    currentPWM += step;
+    // Clamp to target
+    if ((step > 0 && currentPWM > speed) || (step < 0 && currentPWM < speed)) {
+      currentPWM = speed;
+    }
+    ledcWrite(MOTOR_PWM_CHANNEL, currentPWM);
+    delay(2);  // ~100ms total ramp time for full range
+  }
+  
   motorSpeed = speed;
-
-  // Set PWM duty cycle (IN1 stays HIGH, IN2 hardwired to GND)
-  ledcWrite(MOTOR_PWM_CHANNEL, speed);
 }
 
 int getMotorSpeed() {
