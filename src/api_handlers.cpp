@@ -51,6 +51,37 @@ void handleFormNotify(AsyncWebServerRequest* request) {
 
   String from = extractSender(from_raw);
 
+  // GitHub notification formatter: restructure from/message for better display
+  // Input: from="@user wrote a review comment on your pull request", message="org/repo #123"
+  // Output: from="user", message="review comment on org/repo #123"
+  if (app.indexOf("github") >= 0 && from.startsWith("@")) {
+    // Extract username (everything between @ and first space)
+    int spaceIdx = from.indexOf(' ', 1);
+    if (spaceIdx > 1) {
+      String username = from.substring(1, spaceIdx);  // Remove @ prefix
+      String action = from.substring(spaceIdx + 1);   // Rest is the action
+      
+      // Clean up common action patterns
+      action.replace("wrote a ", "");                     // "wrote a review comment" -> "review comment"
+      action.replace("approved your pull request", "approved");
+      action.replace("requested changes on your pull request", "requested changes");
+      action.replace("commented on your pull request", "commented");
+      action.replace("mentioned you on ", "mentioned in ");
+      action.replace("on your pull request", "");
+      action.replace("on your ", "");
+      action.replace("your ", "");
+      action.trim();
+      
+      // Combine action with repo info
+      if (action.length() > 0 && message.length() > 0) {
+        message = action + " on " + message;
+      } else if (action.length() > 0) {
+        message = action;
+      }
+      from = username;  // Just the username without @
+    }
+  }
+
   Serial.printf("FormNotify - app: [%s], from: [%s], message: [%s], priority: [%s]\n",
                 app.c_str(), from.c_str(), message.c_str(), priority.c_str());
 

@@ -7,12 +7,32 @@ void drawSlackIcon(int x, int y) {
   tft.setSwapBytes(false); // Reset to avoid affecting other drawing
 }
 
+// ==================== GitHub Icon ====================
+void drawGitHubIcon(int x, int y) {
+  tft.setSwapBytes(true);
+  tft.pushImage(x, y, ICON_WIDTH, ICON_HEIGHT, github_icon);
+  tft.setSwapBytes(false);
+}
+
+// ==================== Jira Icon ====================
+void drawJiraIcon(int x, int y) {
+  tft.setSwapBytes(true);
+  tft.pushImage(x, y, ICON_WIDTH, ICON_HEIGHT, jira_icon);
+  tft.setSwapBytes(false);
+}
+
 // ==================== App Icon Dispatcher ====================
 void drawAppIcon(int x, int y, String app) {
   app.toLowerCase();
 
   if (app.indexOf("slack") >= 0) {
     drawSlackIcon(x, y);
+  }
+  else if (app.indexOf("github") >= 0) {
+    drawGitHubIcon(x, y);
+  }
+  else if (app.indexOf("jira") >= 0 || app.indexOf("atlassian") >= 0) {
+    drawJiraIcon(x, y);
   }
   else if (app.indexOf("whatsapp") >= 0) {
     tft.fillCircle(x + 8, y + 8, 7, COLOR_WHATSAPP);
