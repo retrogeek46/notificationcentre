@@ -53,10 +53,11 @@
 #define ZONE_CONTENT3_Y_START 175
 #define ZONE_CONTENT3_Y_END 239
 
-// Motor driver pins (L298N Motor A) - Left side only
-#define MOTOR_ENA 33   // PWM speed control
-#define MOTOR_IN1 13   // Direction (always HIGH for forward)
-// IN2 should be hardwired to GND on L298N (single direction)
+// Motor driver pins (TB6612FNG) - Single motor, single direction
+#define MOTOR_ENA 33   // PWMA - PWM speed control
+#define MOTOR_IN1 13   // AIN1 - Direction (always HIGH for forward)
+// AIN2 should be hardwired to GND (single direction)
+// STBY should be tied to VCC (3.3V) to enable the driver
 
 // Motor PWM settings
 #define MOTOR_PWM_CHANNEL 0
@@ -161,6 +162,7 @@
 #define COLOR_CAL_DATE        TFT_WHITE       // Standard date numbers
 #define COLOR_CAL_TODAY_BG    COLOR_HEADER    // Today's highlight box color
 #define COLOR_CAL_TODAY_TEXT  TFT_NAVY       // Date number color inside today's highlight
+#define COLOR_CAL_ADJACENT    TFT_DARKGREY   // Previous/next month's dates
 
 // Notification colors
 #define COLOR_NOTIF_MSG TFT_LIGHTGREY

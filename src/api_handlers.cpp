@@ -92,6 +92,12 @@ void handleFormNotify(AsyncWebServerRequest* request) {
 void handleClearAll(AsyncWebServerRequest* request) {
   Serial.println("=== CLEAR ALL NOTIFICATIONS ===");
   clearAllNotifications();
+  
+  // Switch to default screen (same behavior as clear button)
+  currentScreen = DEFAULT_SCREEN;
+  setZoneDirty(ZONE_TITLE);
+  setAllContentDirty();
+  
   request->send(200, "application/json", "{\"status\":\"cleared\"}");
 }
 
