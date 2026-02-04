@@ -56,6 +56,14 @@ extern unsigned long pcStatsUpdated;   // Last update timestamp
 extern int calViewMonth;               // Month to display (0-11), -1 = current
 extern int calViewYear;                // Year to display, 0 = current
 
+// ==================== Timer ====================
+extern int timerMinutes;               // Selected/remaining minutes (0-60)
+extern bool timerRunning;              // Is countdown active?
+extern unsigned long timerEndMs;       // When timer should end (millis)
+extern int timerOriginalMinutes;       // Original duration for reference
+extern bool timerComplete;             // Timer just completed, flash LED
+extern unsigned long timerCompleteStartMs;  // When completion started
+
 // ==================== Helper Functions ====================
 void initState();
 void setZoneDirty(Zone zone);

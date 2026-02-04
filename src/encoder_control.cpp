@@ -1,6 +1,8 @@
 #include "encoder_control.h"
 #include "config.h"
+#include "state.h"
 #include "motor_control.h"
+#include "timer_screen.h"
 
 // Encoder state
 static int lastCLK = HIGH;
@@ -36,21 +38,19 @@ void checkEncoder() {
   if (currentCLK != lastCLK && currentCLK == LOW) {
     // CLK changed, check direction via DT
     int dtValue = digitalRead(ENCODER_DT);
+    int direction = (dtValue != currentCLK) ? 1 : -1;  // CW = 1, CCW = -1
 
-    if (dtValue != currentCLK) {
-      // Clockwise - increase speed
-      targetSpeed = min(255, targetSpeed + ENCODER_SPEED_STEP);
-    } else {
-      // Counter-clockwise - decrease speed
-      targetSpeed = max(ENCODER_MIN_SPEED, targetSpeed - ENCODER_SPEED_STEP);
+    // If not on timer screen, switch to it
+    if (currentScreen != SCREEN_TIMER) {
+      currentScreen = SCREEN_TIMER;
+      setAllZonesDirty();
+      Serial.println("Encoder: Switched to Timer screen");
     }
 
-    Serial.printf("Encoder: speed=%d\n", targetSpeed);
+    // Adjust timer minutes
+    adjustTimerMinutes(direction);
 
-    // Update motor if running
-    if (motorRunning) {
-      setMotorRaw(targetSpeed);
-    }
+    Serial.printf("Encoder: timer=%d min\n", timerMinutes);
   }
   lastCLK = currentCLK;
 
@@ -63,14 +63,25 @@ void checkEncoder() {
 
       // Button pressed (HIGH -> LOW with pull-up)
       if (currentBtn == LOW) {
-        motorRunning = !motorRunning;
-
-        if (motorRunning) {
-          setMotorRaw(targetSpeed);
-          Serial.printf("Motor ON at speed %d\n", targetSpeed);
+        // Timer screen: start/stop timer
+        if (currentScreen == SCREEN_TIMER) {
+          if (timerRunning) {
+            stopTimer();
+            Serial.println("Encoder: Timer stopped");
+          } else if (timerMinutes > 0) {
+            startTimer();
+            Serial.println("Encoder: Timer started");
+          }
         } else {
-          setMotorRaw(0);
-          Serial.println("Motor OFF");
+          // Other screens: toggle motor (original behavior)
+          motorRunning = !motorRunning;
+          if (motorRunning) {
+            setMotorRaw(targetSpeed);
+            Serial.printf("Motor ON at speed %d\n", targetSpeed);
+          } else {
+            setMotorRaw(0);
+            Serial.println("Motor OFF");
+          }
         }
       }
 
@@ -78,3 +89,4 @@ void checkEncoder() {
     }
   }
 }
+

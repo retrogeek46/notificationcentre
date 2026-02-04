@@ -51,6 +51,14 @@ unsigned long pcStatsUpdated = 0;
 int calViewMonth = -1;   // -1 = current month
 int calViewYear = 0;     // 0 = current year
 
+// ==================== Timer ====================
+int timerMinutes = 0;           // Selected/remaining minutes
+bool timerRunning = false;      // Is countdown active?
+unsigned long timerEndMs = 0;   // When timer should end
+int timerOriginalMinutes = 0;   // Original duration for reference
+bool timerComplete = false;     // Timer just completed
+unsigned long timerCompleteStartMs = 0;  // When completion started
+
 // ==================== Helper Functions ====================
 void initState() {
   currentScreen = DEFAULT_SCREEN;
@@ -81,6 +89,13 @@ void initState() {
   // Reset calendar view to current month
   calViewMonth = -1;
   calViewYear = 0;
+  // Reset timer
+  timerMinutes = 0;
+  timerRunning = false;
+  timerEndMs = 0;
+  timerOriginalMinutes = 0;
+  timerComplete = false;
+  timerCompleteStartMs = 0;
 }
 
 void setZoneDirty(Zone zone) {

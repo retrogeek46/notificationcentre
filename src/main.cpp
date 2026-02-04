@@ -18,6 +18,7 @@
 #include "api_handlers.h"
 #include "notif_screen.h"
 #include "reminder_screen.h"
+#include "timer_screen.h"
 
 // ==================== Setup ====================
 void setup() {
@@ -65,6 +66,9 @@ void loop() {
     lastReminderRefresh = millis();
   }
 
+  // Update timer countdown
+  updateTimerTick();
+
   // Update now playing scrolling ticker
   updateNowPlayingTicker();
 
@@ -85,3 +89,4 @@ void loop() {
 
   yield();
 }
+

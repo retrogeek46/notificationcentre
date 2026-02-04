@@ -4,6 +4,7 @@
 #include "notif_screen.h"
 #include "reminder_screen.h"
 #include "calendar_screen.h"
+#include "timer_screen.h"
 #include "icons/icons.h"
 #include "fonts/MDIOTrial_Regular8pt7b.h"
 #include "fonts/MDIOTrial_Regular9pt7b.h"
@@ -66,6 +67,17 @@ void drawDebugZones() {
 }
 
 // ==================== Zone Helpers ====================
+// Screens that use solid fill instead of sprite backgrounds for content zones
+static bool screenUsesSolidBackground(Screen screen) {
+  switch (screen) {
+    case SCREEN_CALENDAR:
+    case SCREEN_TIMER:
+      return true;
+    default:
+      return false;
+  }
+}
+
 void clearZone(Zone zone) {
   int x_start, y_start, x_end, y_end;
 
@@ -106,11 +118,8 @@ void clearZone(Zone zone) {
   // Push sprite background
   bool isContentZone = (zone == ZONE_CONTENT1 || zone == ZONE_CONTENT2 || zone == ZONE_CONTENT3);
 
-  // Future: Add custom calendar background here
-  // if (currentScreen == SCREEN_CALENDAR && isContentZone) {
-  //   tft.pushImage(x_start, y_start, SPRITE_CAL_WIDTH, SPRITE_CAL_HEIGHT, SPRITE_CAL);
-  // } else
-  if (currentScreen == SCREEN_CALENDAR && isContentZone) {
+  // Some screens use solid fill for content zones (e.g., custom drawing)
+  if (screenUsesSolidBackground(currentScreen) && isContentZone) {
     tft.fillRect(x_start, y_start, zoneW, zoneH, COLOR_BACKGROUND);
   } else {
     switch (zone) {
@@ -168,7 +177,7 @@ static const int TITLE_TEXT_X = 5;
 static const int TITLE_TEXT_Y = 5;
 
 // Clock zone text position
-static const int CLOCK_TEXT_X = 0;
+static const int CLOCK_TEXT_X = 1;
 static const int CLOCK_TEXT_Y = 5;
 
 // ==================== Title Zone ====================
@@ -192,7 +201,8 @@ void drawTitle() {
   titleSprite.setTextSize(1);
   titleSprite.setTextColor(COLOR_HEADER);
   const char* title = (currentScreen == SCREEN_NOTIFS) ? "NOTIFS" : 
-                      (currentScreen == SCREEN_REMINDER ? "REMINDER" : "CALENDAR");
+                      (currentScreen == SCREEN_REMINDER) ? "REMINDER" :
+                      (currentScreen == SCREEN_CALENDAR) ? "CALENDAR" : "TIMER";
   titleSprite.drawString(title, TITLE_TEXT_X, TITLE_TEXT_Y);
 
   // Push to screen
@@ -411,6 +421,45 @@ void drawPcStats() {
 }
 
 void drawNowPlaying() {
+  // Check if timer is running and should flash in status zone
+  static unsigned long lastTimerFlash = 0;
+  if (timerRunning && timerEndMs > millis()) {
+    unsigned long now = millis();
+    unsigned long cyclePos = now % TIMER_FLASH_INTERVAL;  // Position in 5-second cycle
+
+    // Show timer for first TIMER_FLASH_DURATION ms of each cycle
+    if (cyclePos < TIMER_FLASH_DURATION) {
+      // Calculate remaining time
+      unsigned long remaining = timerEndMs - now;
+      int mins = remaining / 60000;
+      int secs = (remaining % 60000) / 1000;
+
+      // Draw timer info in status zone
+      static const int zoneW = STATUS_ZONE_W;
+      static const int zoneH = STATUS_ZONE_H;
+
+      if (!npSpriteCreated) {
+        npSprite.createSprite(zoneW, zoneH);
+        npSprite.setFreeFont(&MDIOTrial_Regular9pt7b);
+        textSprite.createSprite(zoneW - 22, zoneH);
+        textSprite.setFreeFont(&MDIOTrial_Regular9pt7b);
+        npSpriteCreated = true;
+      }
+
+      prepareZoneSprite(npSprite, SPRITE_STATUS, SPRITE_STATUS_WIDTH, SPRITE_STATUS_HEIGHT);
+      npSprite.setTextSize(1);
+      npSprite.setTextColor(COLOR_TIMER_RUNNING);
+
+      char timerStr[32];
+      snprintf(timerStr, sizeof(timerStr), "TIMER: %d:%02d remaining", mins, secs);
+      npSprite.drawString(timerStr, STATUS_TEXT_X, STATUS_TEXT_Y);
+
+      npSprite.pushSprite(ZONE_STATUS_X_START, ZONE_STATUS_Y_START);
+      lastTimerFlash = now;
+      return;  // Don't draw normal status content during timer flash
+    }
+  }
+
   // Check if PC stats are stale (PC went to sleep)
   bool pcStatsStale = (millis() - pcStatsUpdated) > PC_STATS_TIMEOUT;
 
@@ -425,6 +474,7 @@ void drawNowPlaying() {
     return;
   }
   // If we get here with stale stats and no music, show idle disc
+
 
   const int zoneX = ZONE_STATUS_X_START;
   const int zoneY = ZONE_STATUS_Y_START;
@@ -699,8 +749,10 @@ void refreshScreen() {
       drawNotifContent();
     } else if (currentScreen == SCREEN_REMINDER) {
       drawReminderContent();
-    } else {
+    } else if (currentScreen == SCREEN_CALENDAR) {
       drawCalendarContent();
+    } else if (currentScreen == SCREEN_TIMER) {
+      drawTimerContent();
     }
 
     // Clear all dirty flags

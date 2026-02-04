@@ -69,7 +69,7 @@
 #define BTN_DEBOUNCE_MS   50     // Debounce delay in ms
 
 // Rotary encoder pins (input-only GPIOs, external pull-up required)
-#define ENCODER_ENABLED   0      // Set to 1 when encoder is wired
+#define ENCODER_ENABLED   1      // Set to 1 when encoder is wired
 #define ENCODER_CLK       36     // Rotation signal A
 #define ENCODER_DT        39     // Rotation signal B
 #define ENCODER_SW        34     // Push button
@@ -138,6 +138,20 @@
 // ===== NTP Configuration =====
 #define NTP_TIMEZONE_OFFSET (5.5 * 3600)  // IST +5:30
 
+// ===== Timer Configuration =====
+#define TIMER_MAX_MINUTES 60              // Maximum timer duration
+#define TIMER_FLASH_INTERVAL 5000         // Flash timer in status zone every 5 seconds
+#define TIMER_FLASH_DURATION 1000         // Show timer for 1 second during flash
+#define TIMER_COMPLETE_FLASH_MS 500       // LED flash interval when timer completes
+#define TIMER_DIAL_RADIUS 75              // Radius of the circular dial
+#define TIMER_DIAL_CX 160                 // Center X of dial (middle of 320px screen)
+#define TIMER_DIAL_CY 142                 // Center Y of dial (middle of content zones)
+#define TIMER_TICK_INNER 68               // Inner radius for minute tick marks
+#define TIMER_TICK_OUTER 75               // Outer radius for minute tick marks
+#define TIMER_TICK_MAJOR_INNER 62         // Inner radius for 5-min ticks
+#define TIMER_ARC_INNER 30                // Inner radius for filled arc
+#define TIMER_ARC_OUTER 65                // Outer radius for filled arc
+
 // ===== UI Colors =====
 // Include TFT_eSPI before this header to use these
 #define COLOR_BACKGROUND TFT_BLACK
@@ -184,5 +198,12 @@
 #define COLOR_TELEGRAM TFT_BLUE
 #define COLOR_ICON_DEFAULT TFT_DARKGREY
 #define COLOR_ICON_BORDER TFT_WHITE
+
+// Timer colors
+#define COLOR_TIMER_DIAL TFT_DARKGREY     // Dial tick marks
+#define COLOR_TIMER_FILL TFT_CYAN         // Filled arc for selected time
+#define COLOR_TIMER_TEXT TFT_WHITE        // Center time display
+#define COLOR_TIMER_RUNNING TFT_GREEN     // Running indicator
+#define COLOR_TIMER_COMPLETE TFT_RED      // Flash color when complete
 
 #endif
