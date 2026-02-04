@@ -43,6 +43,7 @@ void checkEncoder() {
     // If not on timer screen, switch to it
     if (currentScreen != SCREEN_TIMER) {
       currentScreen = SCREEN_TIMER;
+      resetTimerScreen();  // Reset timer display state for fresh draw
       setAllZonesDirty();
       Serial.println("Encoder: Switched to Timer screen");
     }

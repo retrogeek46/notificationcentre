@@ -3,6 +3,7 @@
 #include "config.h"
 #include "notif_screen.h"
 #include "reminder_screen.h"
+#include "timer_screen.h"
 #include "led_control.h"
 #include "motor_control.h"
 
@@ -269,20 +270,28 @@ void handleNowPlaying(AsyncWebServerRequest* request) {
 // ==================== Screen Switch Handler ====================
 void handleScreenSwitch(AsyncWebServerRequest* request) {
   String name = request->hasParam("name") ? request->getParam("name")->value() : "";
+  String screenName = "notifs";
 
   if (name == "reminder") {
     currentScreen = SCREEN_REMINDER;
+    screenName = "reminder";
   } else if (name == "calendar") {
     currentScreen = SCREEN_CALENDAR;
+    screenName = "calendar";
+  } else if (name == "timer") {
+    currentScreen = SCREEN_TIMER;
+    resetTimerScreen();  // Reset timer display for fresh draw
+    screenName = "timer";
   } else {
     currentScreen = SCREEN_NOTIFS;
+    screenName = "notifs";
   }
 
   setZoneDirty(ZONE_TITLE);
   setAllContentDirty();
 
   request->send(200, "application/json",
-    "{\"status\":\"ok\",\"screen\":\"" + String((currentScreen == SCREEN_REMINDER) ? "reminder" : (currentScreen == SCREEN_CALENDAR ? "calendar" : "notifs")) + "\"}");
+    "{\"status\":\"ok\",\"screen\":\"" + screenName + "\"}");
 }
 
 // ==================== Root Handler ====================
@@ -291,7 +300,7 @@ void handleRoot(AsyncWebServerRequest* request) {
   html += "<p>Use <b>/addreminder</b> POST to add reminders</p>";
   html += "<p>Use <b>/reminders</b> GET to list reminders</p>";
   html += "<p>Use <b>/completeReminder?id=...</b> POST to mark done</p>";
-  html += "<p>Use <b>/screen?name=notifs|reminder|calendar</b> POST to switch</p>";
+  html += "<p>Use <b>/screen?name=notifs|reminder|calendar|timer</b> POST to switch</p>";
   html += "<p>Use <b>/nowplaying</b> POST with song, artist</p>";
   html += "<p>Use <b>/motor</b> POST with speed=0..255</p>";
   html += "<p>Use <b>/gaming</b> POST with enabled=0|1</p>";

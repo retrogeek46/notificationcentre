@@ -1,0 +1,20 @@
+meta {
+  name: Change Screen to Timer
+  type: http
+  seq: 7
+}
+
+post {
+  url: http://{{notif_url}}/screen?name=timer
+  body: none
+  auth: inherit
+}
+
+params:query {
+  name: timer
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

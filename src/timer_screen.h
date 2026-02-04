@@ -18,4 +18,7 @@ void stopTimer();
 // Adjust timer minutes (called by encoder)
 void adjustTimerMinutes(int delta);
 
+// Reset timer screen state (call when entering timer screen)
+void resetTimerScreen();
+
 #endif

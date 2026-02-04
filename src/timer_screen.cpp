@@ -13,54 +13,87 @@ extern TFT_eSPI tft;
 static unsigned long lastLedFlash = 0;
 static bool ledFlashState = false;
 
+// Timer display state (file-scope so reset function can access)
+static bool timerFirstDraw = true;
+static int timerLastDisplayedMinutes = -1;
+
 void drawTimerContent() {
-  // Draw directly to TFT (no sprite - saves memory)
-  
   // Dial center coordinates (screen coordinates)
   int cx = TIMER_DIAL_CX;  // 160
   int cy = TIMER_DIAL_CY;  // 142
 
-  // Draw dial background circles
-  tft.drawCircle(cx, cy, TIMER_DIAL_RADIUS, COLOR_TIMER_DIAL);
-  tft.drawCircle(cx, cy, TIMER_DIAL_RADIUS - 1, COLOR_TIMER_DIAL);
-
-  // Draw 60 tick marks around the dial
-  for (int i = 0; i < 60; i++) {
-    float angle = (i * 6 - 90) * PI / 180.0;  // Start from 12 o'clock
-    int innerR = (i % 5 == 0) ? TIMER_TICK_MAJOR_INNER : TIMER_TICK_INNER;
-    int outerR = TIMER_TICK_OUTER;
-
-    int x1 = cx + (int)(innerR * cos(angle));
-    int y1 = cy + (int)(innerR * sin(angle));
-    int x2 = cx + (int)(outerR * cos(angle));
-    int y2 = cy + (int)(outerR * sin(angle));
-
-    uint16_t tickColor = (i % 5 == 0) ? TFT_WHITE : COLOR_TIMER_DIAL;
-    tft.drawLine(x1, y1, x2, y2, tickColor);
+  // First draw or switching to timer screen - clear entire content area
+  if (timerFirstDraw) {
+    tft.fillRect(ZONE_CONTENT1_X_START, ZONE_CONTENT1_Y_START, 
+                 ZONE_CONTENT1_X_END - ZONE_CONTENT1_X_START + 1,
+                 ZONE_CONTENT3_Y_END - ZONE_CONTENT1_Y_START + 1, 
+                 COLOR_BACKGROUND);
+    
+    // Draw dial circles (static - only on first draw)
+    tft.drawCircle(cx, cy, TIMER_DIAL_RADIUS, COLOR_TIMER_DIAL);
+    tft.drawCircle(cx, cy, TIMER_DIAL_RADIUS - 1, COLOR_TIMER_DIAL);
+    
+    // Draw 60 tick marks (static - only on first draw)
+    for (int i = 0; i < 60; i++) {
+      float angle = (i * 6 - 90) * PI / 180.0;
+      int innerR = (i % 5 == 0) ? TIMER_TICK_MAJOR_INNER : TIMER_TICK_INNER;
+      int outerR = TIMER_TICK_OUTER;
+      
+      int x1 = cx + (int)(innerR * cos(angle));
+      int y1 = cy + (int)(innerR * sin(angle));
+      int x2 = cx + (int)(outerR * cos(angle));
+      int y2 = cy + (int)(outerR * sin(angle));
+      
+      uint16_t tickColor = (i % 5 == 0) ? TFT_WHITE : COLOR_TIMER_DIAL;
+      tft.drawLine(x1, y1, x2, y2, tickColor);
+    }
+    
+    timerFirstDraw = false;
+    timerLastDisplayedMinutes = -1;  // Force arc redraw
   }
 
-  // Draw filled arc for selected/remaining time
+  // Only redraw arc if minutes changed
   int displayMinutes = timerMinutes;
-  if (displayMinutes > 0) {
-    // Fill arc from 12 o'clock clockwise
-    float endAngle = (displayMinutes * 6.0);  // 6 degrees per minute
-
-    for (float a = 0; a < endAngle; a += 1.0) {
-      float rad = (a - 90) * PI / 180.0;
-
-      // Draw filled wedge from inner to outer arc
-      for (int r = TIMER_ARC_INNER; r <= TIMER_ARC_OUTER; r += 2) {
-        int px = cx + (int)(r * cos(rad));
-        int py = cy + (int)(r * sin(rad));
-        tft.drawPixel(px, py, COLOR_TIMER_FILL);
+  if (displayMinutes != timerLastDisplayedMinutes) {
+    // Clear arc area first
+    tft.fillCircle(cx, cy, TIMER_ARC_OUTER, COLOR_BACKGROUND);
+    
+    // Redraw tick marks inside arc area
+    for (int i = 0; i < 60; i++) {
+      float angle = (i * 6 - 90) * PI / 180.0;
+      int innerR = (i % 5 == 0) ? TIMER_TICK_MAJOR_INNER : TIMER_TICK_INNER;
+      int outerR = TIMER_TICK_OUTER;
+      
+      int x1 = cx + (int)(innerR * cos(angle));
+      int y1 = cy + (int)(innerR * sin(angle));
+      int x2 = cx + (int)(outerR * cos(angle));
+      int y2 = cy + (int)(outerR * sin(angle));
+      
+      uint16_t tickColor = (i % 5 == 0) ? TFT_WHITE : COLOR_TIMER_DIAL;
+      tft.drawLine(x1, y1, x2, y2, tickColor);
+    }
+    
+    // Draw filled arc for selected/remaining time
+    if (displayMinutes > 0) {
+      float endAngle = (displayMinutes * 6.0);
+      for (float a = 0; a < endAngle; a += 1.0) {
+        float rad = (a - 90) * PI / 180.0;
+        for (int r = TIMER_ARC_INNER; r <= TIMER_ARC_OUTER; r += 2) {
+          int px = cx + (int)(r * cos(rad));
+          int py = cy + (int)(r * sin(rad));
+          tft.drawPixel(px, py, COLOR_TIMER_FILL);
+        }
       }
     }
+    
+    timerLastDisplayedMinutes = displayMinutes;
   }
 
-  // Draw center time display
+  // Clear center text area and redraw time
+  tft.fillRect(cx - 40, cy - 15, 80, 30, COLOR_BACKGROUND);
+  
   char timeStr[8];
   if (timerRunning) {
-    // Show MM:SS format when running
     if (timerEndMs > millis()) {
       unsigned long remaining = timerEndMs - millis();
       int mins = remaining / 60000;
@@ -74,22 +107,28 @@ void drawTimerContent() {
   }
 
   tft.setFreeFont(&MDIOTrial_Bold10pt7b);
-  tft.setTextDatum(MC_DATUM);  // Middle center
+  tft.setTextDatum(MC_DATUM);
   uint16_t textColor = timerRunning ? COLOR_TIMER_RUNNING : COLOR_TIMER_TEXT;
-  tft.setTextColor(textColor, COLOR_BACKGROUND);
+  tft.setTextColor(textColor);
   tft.drawString(timeStr, cx, cy);
 
-  // Draw instruction text below dial
+  // Clear and redraw instruction text
+  tft.fillRect(cx - 150, cy + TIMER_DIAL_RADIUS + 5, 300, 20, COLOR_BACKGROUND);
   tft.setFreeFont(&MDIOTrial_Regular9pt7b);
-  tft.setTextColor(COLOR_TIMER_DIAL, COLOR_BACKGROUND);
+  tft.setTextColor(COLOR_TIMER_DIAL);
   if (!timerRunning) {
     tft.drawString("Rotate: Set | Press: Start", cx, cy + TIMER_DIAL_RADIUS + 15);
   } else {
     tft.drawString("Press: Cancel", cx, cy + TIMER_DIAL_RADIUS + 15);
   }
 
-  // Reset text datum
   tft.setTextDatum(TL_DATUM);
+}
+
+// Reset first draw flag when entering timer screen
+void resetTimerScreen() {
+  timerFirstDraw = true;
+  timerLastDisplayedMinutes = -1;
 }
 
 void updateTimerTick() {

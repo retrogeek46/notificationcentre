@@ -421,14 +421,25 @@ void drawPcStats() {
 }
 
 void drawNowPlaying() {
-  // Check if timer is running and should flash in status zone
-  static unsigned long lastTimerFlash = 0;
+  // Check if PC stats are stale (PC went to sleep)
+  bool pcStatsStale = (millis() - pcStatsUpdated) > PC_STATS_TIMEOUT;
+  bool isIdleMode = !nowPlayingActive && pcStatsStale;  // Idle disc would normally show
+
+  // Check if timer is running and should show in status zone
   if (timerRunning && timerEndMs > millis()) {
     unsigned long now = millis();
-    unsigned long cyclePos = now % TIMER_FLASH_INTERVAL;  // Position in 5-second cycle
+    bool shouldShowTimer = false;
 
-    // Show timer for first TIMER_FLASH_DURATION ms of each cycle
-    if (cyclePos < TIMER_FLASH_DURATION) {
+    if (isIdleMode) {
+      // Idle mode: always show timer
+      shouldShowTimer = true;
+    } else {
+      // PC stats or media playing: flash timer every 5 seconds for 1 second
+      unsigned long cyclePos = now % TIMER_FLASH_INTERVAL;
+      shouldShowTimer = (cyclePos < TIMER_FLASH_DURATION);
+    }
+
+    if (shouldShowTimer) {
       // Calculate remaining time
       unsigned long remaining = timerEndMs - now;
       int mins = remaining / 60000;
@@ -455,13 +466,9 @@ void drawNowPlaying() {
       npSprite.drawString(timerStr, STATUS_TEXT_X, STATUS_TEXT_Y);
 
       npSprite.pushSprite(ZONE_STATUS_X_START, ZONE_STATUS_Y_START);
-      lastTimerFlash = now;
-      return;  // Don't draw normal status content during timer flash
+      return;  // Don't draw normal status content during timer display
     }
   }
-
-  // Check if PC stats are stale (PC went to sleep)
-  bool pcStatsStale = (millis() - pcStatsUpdated) > PC_STATS_TIMEOUT;
 
   // Priority: Music → Media, Active Stats → Stats, Stale/Idle → Idle Disc
   // 1. If music is playing, show Now Playing
@@ -474,6 +481,7 @@ void drawNowPlaying() {
     return;
   }
   // If we get here with stale stats and no music, show idle disc
+
 
 
   const int zoneX = ZONE_STATUS_X_START;
@@ -739,10 +747,12 @@ void refreshScreen() {
   // Content zones (check all 3)
   bool anyContentDirty = isZoneDirty(ZONE_CONTENT1) || isZoneDirty(ZONE_CONTENT2) || isZoneDirty(ZONE_CONTENT3);
   if (anyContentDirty) {
-    // Clear all dirty content zones
-    if (isZoneDirty(ZONE_CONTENT1)) clearZone(ZONE_CONTENT1);
-    if (isZoneDirty(ZONE_CONTENT2)) clearZone(ZONE_CONTENT2);
-    if (isZoneDirty(ZONE_CONTENT3)) clearZone(ZONE_CONTENT3);
+    // Clear dirty content zones (skip for timer - it handles its own redraw)
+    if (currentScreen != SCREEN_TIMER) {
+      if (isZoneDirty(ZONE_CONTENT1)) clearZone(ZONE_CONTENT1);
+      if (isZoneDirty(ZONE_CONTENT2)) clearZone(ZONE_CONTENT2);
+      if (isZoneDirty(ZONE_CONTENT3)) clearZone(ZONE_CONTENT3);
+    }
 
     // Normal content drawing
     if (currentScreen == SCREEN_NOTIFS) {
