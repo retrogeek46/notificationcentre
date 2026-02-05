@@ -462,7 +462,7 @@ void drawNowPlaying() {
       npSprite.setTextColor(COLOR_TIMER_RUNNING);
 
       char timerStr[32];
-      snprintf(timerStr, sizeof(timerStr), "TIMER: %d:%02d remaining", mins, secs);
+      snprintf(timerStr, sizeof(timerStr), "TIMER: %dm %02ds left", mins, secs);
       npSprite.drawString(timerStr, STATUS_TEXT_X, STATUS_TEXT_Y);
 
       npSprite.pushSprite(ZONE_STATUS_X_START, ZONE_STATUS_Y_START);
