@@ -171,4 +171,9 @@ void drawCalendarContent() {
   if (calSpriteCreated) {
     calSprite.pushSprite(0, zoneY);
   }
+
+#if DEBUG_NO_BG_CONTENT_ZONE
+  // Draw debug border for content zone
+  tft.drawRect(0, zoneY, calW, calH, TFT_WHITE);
+#endif
 }

@@ -28,7 +28,7 @@ void checkButtons() {
       if (currentState == LOW) {
         Serial.println("Button: Clear Notifications + Switch to Default Screen");
         clearAllNotifications();
-        currentScreen = DEFAULT_SCREEN;
+        currentScreen = getDefaultScreen();
         setAllZonesDirty();
       }
 

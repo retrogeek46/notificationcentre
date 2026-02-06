@@ -1,0 +1,22 @@
+meta {
+  name: Add todo items
+  type: http
+  seq: 15
+}
+
+post {
+  url: http://{{notif_url}}/todo
+  body: formUrlEncoded
+  auth: inherit
+}
+
+body:form-urlencoded {
+  0: ad_network_seg_all_orgs is failing
+  1: validate contact_targeting
+  2: work on removing deprecated tables
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

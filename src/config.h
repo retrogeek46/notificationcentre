@@ -10,6 +10,7 @@
 
 // Debugging
 #define DEBUG_SHOW_ZONES 0
+#define DEBUG_NO_BG_CONTENT_ZONE 1  // Draw debug border for screens without bg sprites (calendar, timer, todo)
 #define SPRITE_BG_ENABLED 1  // Set to 1 to enable sprite backgrounds, 0 for solid fill
 
 // Default screen on startup (SCREEN_NOTIFS, SCREEN_REMINDER, SCREEN_CALENDAR)
@@ -145,12 +146,17 @@
 #define TIMER_COMPLETE_FLASH_MS 500       // LED flash interval when timer completes
 #define TIMER_DIAL_RADIUS 75              // Radius of the circular dial
 #define TIMER_DIAL_CX 160                 // Center X of dial (middle of 320px screen)
-#define TIMER_DIAL_CY 142                 // Center Y of dial (middle of content zones)
+#define TIMER_DIAL_CY 130                 // Center Y of dial (middle of content zones)
 #define TIMER_TICK_INNER 68               // Inner radius for minute tick marks
 #define TIMER_TICK_OUTER 75               // Outer radius for minute tick marks
 #define TIMER_TICK_MAJOR_INNER 62         // Inner radius for 5-min ticks
 #define TIMER_ARC_INNER 30                // Inner radius for filled arc
 #define TIMER_ARC_OUTER 65                // Outer radius for filled arc
+#define TIMER_CENTER_TEXT_W 40            // Half-width of center text clear area
+#define TIMER_CENTER_TEXT_H 15            // Half-height of center text clear area
+#define TIMER_INSTR_HALF_W 150            // Half-width of instruction text area
+#define TIMER_INSTR_Y_CLEAR 5             // Y offset for instruction clear rect
+#define TIMER_INSTR_Y_TEXT 15             // Y offset for instruction text
 
 // ===== UI Colors =====
 // Include TFT_eSPI before this header to use these
@@ -203,7 +209,21 @@
 #define COLOR_TIMER_DIAL TFT_DARKGREY     // Dial tick marks
 #define COLOR_TIMER_FILL TFT_CYAN         // Filled arc for selected time
 #define COLOR_TIMER_TEXT TFT_WHITE        // Center time display
-#define COLOR_TIMER_RUNNING TFT_GREEN     // Running indicator
+#define COLOR_TIMER_RUNNING TFT_NAVY      // Running indicator
 #define COLOR_TIMER_COMPLETE TFT_RED      // Flash color when complete
+
+// Todo colors
+#define COLOR_TODO_BULLET 0xD5BF          // Lavender squares
+#define COLOR_TODO_CHECK TFT_GREEN        // Checkmark for completed
+#define COLOR_TODO_TEXT TFT_YELLOW        // Task text
+
+// ===== Todo Layout Configuration =====
+#define TODO_MAX_LINES 10                 // Max visible lines on screen
+#define TODO_LINE_HEIGHT 19               // Pixel height per line (195px / 10 = 19.5)
+#define TODO_BULLET_SIZE 10               // Lavender square size
+#define TODO_BULLET_X 8                   // Bullet X position
+#define TODO_TEXT_X 24                    // Text X position (after bullet)
+#define TODO_TEXT_WIDTH 290               // Available width for text
+#define TODO_CHARS_PER_LINE 38            // Approx chars that fit per line
 
 #endif

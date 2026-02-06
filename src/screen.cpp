@@ -5,6 +5,7 @@
 #include "reminder_screen.h"
 #include "calendar_screen.h"
 #include "timer_screen.h"
+#include "todo_screen.h"
 #include "icons/icons.h"
 #include "fonts/MDIOTrial_Regular8pt7b.h"
 #include "fonts/MDIOTrial_Regular9pt7b.h"
@@ -72,6 +73,7 @@ static bool screenUsesSolidBackground(Screen screen) {
   switch (screen) {
     case SCREEN_CALENDAR:
     case SCREEN_TIMER:
+    case SCREEN_TODO:
       return true;
     default:
       return false;
@@ -202,7 +204,8 @@ void drawTitle() {
   titleSprite.setTextColor(COLOR_HEADER);
   const char* title = (currentScreen == SCREEN_NOTIFS) ? "NOTIFS" : 
                       (currentScreen == SCREEN_REMINDER) ? "REMINDER" :
-                      (currentScreen == SCREEN_CALENDAR) ? "CALENDAR" : "TIMER";
+                      (currentScreen == SCREEN_CALENDAR) ? "CALENDAR" :
+                      (currentScreen == SCREEN_TODO) ? "TODO" : "TIMER";
   titleSprite.drawString(title, TITLE_TEXT_X, TITLE_TEXT_Y);
 
   // Push to screen
@@ -763,6 +766,8 @@ void refreshScreen() {
       drawCalendarContent();
     } else if (currentScreen == SCREEN_TIMER) {
       drawTimerContent();
+    } else if (currentScreen == SCREEN_TODO) {
+      drawTodoContent();
     }
 
     // Clear all dirty flags

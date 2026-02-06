@@ -64,6 +64,11 @@ extern int timerOriginalMinutes;       // Original duration for reference
 extern bool timerComplete;             // Timer just completed, flash LED
 extern unsigned long timerCompleteStartMs;  // When completion started
 
+// ==================== Todo List ====================
+#define MAX_TODO_ITEMS 20
+extern TodoItem todoItems[MAX_TODO_ITEMS];
+extern int todoItemCount;
+
 // ==================== Helper Functions ====================
 void initState();
 void setZoneDirty(Zone zone);
@@ -71,5 +76,7 @@ void setAllZonesDirty();
 void setAllContentDirty();  // Helper to mark all 3 content zones dirty
 void clearZoneDirty(Zone zone);
 bool isZoneDirty(Zone zone);
+bool hasUnfinishedTodos();  // Check if any todo items are incomplete
+Screen getDefaultScreen();  // Get default screen based on state
 
 #endif

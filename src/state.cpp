@@ -96,6 +96,11 @@ void initState() {
   timerOriginalMinutes = 0;
   timerComplete = false;
   timerCompleteStartMs = 0;
+  // Reset todos
+  for (int i = 0; i < MAX_TODO_ITEMS; i++) {
+    todoItems[i] = TodoItem();
+  }
+  todoItemCount = 0;
 }
 
 void setZoneDirty(Zone zone) {
@@ -128,3 +133,24 @@ bool isZoneDirty(Zone zone) {
   }
   return false;
 }
+
+// ==================== Todo List ====================
+TodoItem todoItems[MAX_TODO_ITEMS];
+int todoItemCount = 0;
+
+bool hasUnfinishedTodos() {
+  for (int i = 0; i < todoItemCount; i++) {
+    if (!todoItems[i].completed) {
+      return true;
+    }
+  }
+  return false;
+}
+
+Screen getDefaultScreen() {
+  if (hasUnfinishedTodos()) {
+    return SCREEN_TODO;
+  }
+  return SCREEN_CALENDAR;
+}
+

@@ -21,7 +21,16 @@ enum Screen {
   SCREEN_NOTIFS = 0,
   SCREEN_REMINDER = 1,
   SCREEN_CALENDAR = 2,
-  SCREEN_TIMER = 3
+  SCREEN_TIMER = 3,
+  SCREEN_TODO = 4
+};
+
+// ==================== Todo Item ====================
+struct TodoItem {
+  String text;
+  bool completed;
+
+  TodoItem() : text(""), completed(false) {}
 };
 
 // ==================== Notification ====================

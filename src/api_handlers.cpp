@@ -4,6 +4,7 @@
 #include "notif_screen.h"
 #include "reminder_screen.h"
 #include "timer_screen.h"
+#include "todo_screen.h"
 #include "led_control.h"
 #include "motor_control.h"
 
@@ -35,6 +36,10 @@ void setupApiRoutes() {
 
   // Calendar month
   server.on("/calmonth", HTTP_POST, handleCalendarMonth);
+
+  // Todo list
+  server.on("/todo", HTTP_POST, handleTodoList);
+  server.on("/completeTask", HTTP_POST, handleCompleteTask);
 
   // Root
   server.on("/", HTTP_GET, handleRoot);
@@ -94,8 +99,8 @@ void handleClearAll(AsyncWebServerRequest* request) {
   Serial.println("=== CLEAR ALL NOTIFICATIONS ===");
   clearAllNotifications();
   
-  // Switch to default screen (same behavior as clear button)
-  currentScreen = DEFAULT_SCREEN;
+  // Switch to dynamic default screen
+  currentScreen = getDefaultScreen();
   setZoneDirty(ZONE_TITLE);
   setAllContentDirty();
   
@@ -282,6 +287,10 @@ void handleScreenSwitch(AsyncWebServerRequest* request) {
     currentScreen = SCREEN_TIMER;
     resetTimerScreen();  // Reset timer display for fresh draw
     screenName = "timer";
+  } else if (name == "todo") {
+    currentScreen = SCREEN_TODO;
+    resetTodoScreen();  // Reset todo display for fresh draw
+    screenName = "todo";
   } else {
     currentScreen = SCREEN_NOTIFS;
     screenName = "notifs";
@@ -400,4 +409,82 @@ void handleCalendarMonth(AsyncWebServerRequest* request) {
 
   request->send(200, "application/json",
     "{\"status\":\"ok\",\"month\":" + String(calViewMonth + 1) + ",\"year\":" + String(calViewYear) + "}");
+}
+
+// ==================== Todo List Handler ====================
+void handleTodoList(AsyncWebServerRequest* request) {
+  // Expects params where key is numeric index (0, 1, 2...) and value is task text
+  // e.g., POST /todo with body: 0=Task one&1=Task two&2=Task three
+  // Only updates specified indices, preserving others
+  
+  int updatedCount = 0;
+  
+  // Check for numeric params 0-19
+  for (int i = 0; i < MAX_TODO_ITEMS; i++) {
+    String paramName = String(i);
+    
+    // Check both POST body and query params
+    String taskText = "";
+    if (request->hasParam(paramName, true)) {
+      taskText = request->getParam(paramName, true)->value();
+    } else if (request->hasParam(paramName)) {
+      taskText = request->getParam(paramName)->value();
+    }
+    
+    if (taskText.length() > 0) {
+      taskText.trim();
+      todoItems[i].text = taskText;
+      todoItems[i].completed = false;
+      
+      // Expand count if needed
+      if (i >= todoItemCount) {
+        todoItemCount = i + 1;
+      }
+      
+      Serial.printf("Todo[%d] = %s\n", i, taskText.c_str());
+      updatedCount++;
+    }
+  }
+  
+  if (updatedCount == 0) {
+    request->send(400, "application/json", "{\"error\":\"No tasks provided. Use 0=text, 1=text, etc.\"}");
+    return;
+  }
+  
+  Serial.printf("Todo list updated: %d items changed, total: %d\n", updatedCount, todoItemCount);
+  
+  // Switch to todo screen if we have items
+  if (todoItemCount > 0 && currentScreen != SCREEN_TODO) {
+    currentScreen = SCREEN_TODO;
+    setZoneDirty(ZONE_TITLE);
+  }
+  setAllContentDirty();
+  
+  request->send(200, "application/json",
+    "{\"status\":\"ok\",\"updated\":" + String(updatedCount) + ",\"count\":" + String(todoItemCount) + "}");
+}
+
+// ==================== Complete Task Handler ====================
+void handleCompleteTask(AsyncWebServerRequest* request) {
+  String indexStr = request->hasParam("index", true) ? request->getParam("index", true)->value()
+                                                     : (request->hasParam("index") ? request->getParam("index")->value() : "");
+  
+  if (indexStr.length() == 0) {
+    request->send(400, "application/json", "{\"error\":\"Missing index\"}");
+    return;
+  }
+  
+  int index = indexStr.toInt();
+  
+  if (index < 0 || index >= todoItemCount) {
+    request->send(400, "application/json", "{\"error\":\"Invalid index\"}");
+    return;
+  }
+  
+  todoItems[index].completed = true;
+  Serial.printf("Task %d marked complete: %s\n", index, todoItems[index].text.c_str());
+  
+  setAllContentDirty();
+  
+  request->send(200, "application/json", "{\"status\":\"completed\",\"index\":" + String(index) + "}");
 }
