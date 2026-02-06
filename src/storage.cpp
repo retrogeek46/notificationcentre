@@ -21,6 +21,7 @@ static Preferences prefs;
 void initStorage() {
   prefs.begin("reminders", false);  // false = read/write mode
   loadReminders();
+  loadTodos();
   Serial.println("Storage initialized");
 }
 
@@ -91,4 +92,74 @@ void clearStoredReminders() {
   prefs.remove("data");
   prefs.remove("nextId");
   Serial.println("Stored reminders cleared");
+}
+
+// ==================== Todo Storage ====================
+
+// Fixed-size struct for todo flash storage
+struct TodoStorage {
+  char text[128];
+  bool completed;
+};
+
+static Preferences todoPrefs;
+static bool todoPrefsInitialized = false;
+
+static void ensureTodoPrefs() {
+  if (!todoPrefsInitialized) {
+    todoPrefs.begin("todos", false);
+    todoPrefsInitialized = true;
+  }
+}
+
+void saveTodos() {
+  ensureTodoPrefs();
+  
+  TodoStorage storage[MAX_TODO_ITEMS];
+  
+  // Convert from TodoItem to TodoStorage
+  for (int i = 0; i < MAX_TODO_ITEMS; i++) {
+    strncpy(storage[i].text, todoItems[i].text.c_str(), 127);
+    storage[i].text[127] = '\0';
+    storage[i].completed = todoItems[i].completed;
+  }
+  
+  todoPrefs.putBytes("data", storage, sizeof(storage));
+  todoPrefs.putInt("count", todoItemCount);
+  
+  Serial.printf("Saved %d todos to flash\n", todoItemCount);
+}
+
+void loadTodos() {
+  ensureTodoPrefs();
+  
+  TodoStorage storage[MAX_TODO_ITEMS];
+  
+  size_t len = todoPrefs.getBytesLength("data");
+  if (len == 0) {
+    Serial.println("No stored todos found");
+    return;
+  }
+  
+  todoPrefs.getBytes("data", storage, sizeof(storage));
+  todoItemCount = todoPrefs.getInt("count", 0);
+  
+  // Convert from TodoStorage to TodoItem
+  for (int i = 0; i < MAX_TODO_ITEMS; i++) {
+    todoItems[i].text = String(storage[i].text);
+    todoItems[i].completed = storage[i].completed;
+  }
+  
+  Serial.printf("Loaded %d todos from flash\n", todoItemCount);
+}
+
+void clearStoredTodos() {
+  ensureTodoPrefs();
+  todoPrefs.remove("data");
+  todoPrefs.remove("count");
+  todoItemCount = 0;
+  for (int i = 0; i < MAX_TODO_ITEMS; i++) {
+    todoItems[i] = TodoItem();
+  }
+  Serial.println("Stored todos cleared");
 }

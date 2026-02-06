@@ -21,6 +21,7 @@ void handleGamingMode(AsyncWebServerRequest* request);
 void handlePcStats(AsyncWebServerRequest* request);
 void handleCalendarMonth(AsyncWebServerRequest* request);
 void handleTodoList(AsyncWebServerRequest* request);
+void handleListTodos(AsyncWebServerRequest* request);
 void handleCompleteTask(AsyncWebServerRequest* request);
 
 #endif

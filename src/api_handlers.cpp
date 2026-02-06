@@ -7,6 +7,7 @@
 #include "todo_screen.h"
 #include "led_control.h"
 #include "motor_control.h"
+#include "storage.h"
 
 AsyncWebServer server(80);
 
@@ -39,10 +40,16 @@ void setupApiRoutes() {
 
   // Todo list
   server.on("/todo", HTTP_POST, handleTodoList);
+  server.on("/todos", HTTP_GET, handleListTodos);
   server.on("/completeTask", HTTP_POST, handleCompleteTask);
 
   // Root
   server.on("/", HTTP_GET, handleRoot);
+
+  // Enable CORS for local dashboard
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "Content-Type");
 
   server.begin();
   Serial.println("Ready! http://notification.local/");
@@ -459,6 +466,7 @@ void handleTodoList(AsyncWebServerRequest* request) {
     setZoneDirty(ZONE_TITLE);
   }
   setAllContentDirty();
+  saveTodos();  // Persist to flash
   
   request->send(200, "application/json",
     "{\"status\":\"ok\",\"updated\":" + String(updatedCount) + ",\"count\":" + String(todoItemCount) + "}");
@@ -485,6 +493,32 @@ void handleCompleteTask(AsyncWebServerRequest* request) {
   Serial.printf("Task %d marked complete: %s\n", index, todoItems[index].text.c_str());
   
   setAllContentDirty();
+  saveTodos();  // Persist to flash
   
   request->send(200, "application/json", "{\"status\":\"completed\",\"index\":" + String(index) + "}");
+}
+
+// ==================== List Todos Handler ====================
+void handleListTodos(AsyncWebServerRequest* request) {
+  String json = "[";
+  bool first = true;
+  
+  for (int i = 0; i < todoItemCount; i++) {
+    if (!first) json += ",";
+    first = false;
+    
+    json += "{\"index\":";
+    json += String(i);
+    json += ",\"text\":\"";
+    // Escape quotes in text
+    String escapedText = todoItems[i].text;
+    escapedText.replace("\"", "\\\"");
+    json += escapedText;
+    json += "\",\"completed\":";
+    json += todoItems[i].completed ? "true" : "false";
+    json += "}";
+  }
+  
+  json += "]";
+  request->send(200, "application/json", json);
 }

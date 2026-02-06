@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESP32 Notification Centre</title>
+  <style>
+    :root {
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-tertiary: #21262d;
+      --border: #30363d;
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --accent-blue: #58a6ff;
+      --accent-green: #3fb950;
+      --accent-yellow: #d29922;
+      --accent-red: #f85149;
+      --accent-purple: #a371f7;
+    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    .container { max-width: 900px; margin: 0 auto; }
+    
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    header h1 {
+      font-size: 1.8rem;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .connection {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      align-items: center;
+      margin-top: 15px;
+    }
+    
+    .connection input {
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      width: 250px;
+      font-size: 0.9rem;
+    }
+    
+    .connection button {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: none;
+      background: var(--accent-blue);
+      color: white;
+      cursor: pointer;
+      font-weight: 500;
+      transition: opacity 0.2s;
+    }
+    
+    .connection button:hover { opacity: 0.85; }
+    
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent-red);
+      transition: background 0.3s;
+    }
+    
+    .status-dot.connected { background: var(--accent-green); }
+    
+    .sections { display: grid; gap: 20px; }
+    
+    .section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .section-header {
+      padding: 12px 16px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+    
+    .section-header:hover { background: #282e36; }
+    
+    .section-header .icon { font-size: 1.1rem; }
+    
+    .section-header .collapse-icon {
+      margin-left: auto;
+      transition: transform 0.2s;
+      color: var(--text-secondary);
+    }
+    
+    .section.collapsed .section-header .collapse-icon { transform: rotate(-90deg); }
+    .section.collapsed .section-body { display: none; }
+    
+    .section-body { padding: 16px; }
+    
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+    
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group.full-width { grid-column: 1 / -1; }
+    
+    label {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    
+    input, select, textarea {
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      transition: border-color 0.2s;
+    }
+    
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+    }
+    
+    textarea { resize: vertical; min-height: 60px; font-family: inherit; }
+    
+    .btn-row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+    
+    button {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: none;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.85rem;
+    }
+    
+    .btn-primary { background: var(--accent-blue); color: white; }
+    .btn-success { background: var(--accent-green); color: white; }
+    .btn-warning { background: var(--accent-yellow); color: black; }
+    .btn-danger { background: var(--accent-red); color: white; }
+    .btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); }
+    
+    button:hover { opacity: 0.85; transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+    
+    .screen-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+    .screen-btns button { flex: 1; min-width: 100px; }
+    
+    .response-area {
+      margin-top: 20px;
+      padding: 16px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+    
+    .response-area h3 {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+    }
+    
+    #responseLog {
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 0.85rem;
+      max-height: 200px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    
+    .log-entry { padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .log-entry:last-child { border-bottom: none; }
+    .log-entry.success { color: var(--accent-green); }
+    .log-entry.error { color: var(--accent-red); }
+    .log-entry .time { color: var(--text-secondary); margin-right: 8px; }
+    
+    /* Item lists */
+    .item-list { margin-top: 12px; }
+    .item-list-header {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .list-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: var(--bg-tertiary);
+      border-radius: 6px;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+    }
+    
+    .list-item.completed { opacity: 0.5; text-decoration: line-through; }
+    
+    .list-item input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent-green);
+      cursor: pointer;
+    }
+    
+    .list-item .item-text { flex: 1; }
+    .list-item .item-meta { font-size: 0.75rem; color: var(--text-secondary); }
+    
+    .empty-state {
+      color: var(--text-secondary);
+      font-style: italic;
+      text-align: center;
+      padding: 12px;
+    }
+    
+    /* Collapsible add forms */
+    .add-form-details {
+      margin-top: 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    
+    .add-form-details summary {
+      padding: 10px 14px;
+      background: var(--bg-tertiary);
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      list-style: none;
+    }
+    
+    .add-form-details summary::-webkit-details-marker { display: none; }
+    .add-form-details summary:hover { color: var(--text-primary); }
+    
+    .add-form-details[open] summary { 
+      border-bottom: 1px solid var(--border);
+      color: var(--text-primary);
+    }
+    
+    .add-form-content { padding: 12px; }
+    
+    /* Todo input rows */
+    .todo-inputs { display: flex; flex-direction: column; gap: 6px; }
+    
+    .todo-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .todo-row input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent-green);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    
+    .todo-row input[type="text"] {
+      flex: 1;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+    }
+    
+    .todo-row input[type="text"].completed {
+      opacity: 0.5;
+      text-decoration: line-through;
+    }
+    
+    .todo-row .todo-index {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      min-width: 20px;
+      text-align: right;
+    }
+    
+    /* Slider */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      background: var(--bg-tertiary);
+      border-radius: 3px;
+      border: none;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      background: var(--accent-blue);
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    
+    .slider-value {
+      display: inline-block;
+      min-width: 40px;
+      text-align: center;
+      color: var(--accent-blue);
+      font-weight: 600;
+    }
+    
+    @media (max-width: 600px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .connection { flex-direction: column; }
+      .connection input { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🔔 ESP32 Notification Centre</h1>
+      <div class="connection">
+        <span class="status-dot" id="statusDot"></span>
+        <input type="text" id="espHost" value="http://192.168.1.246" placeholder="ESP32 Address">
+        <button onclick="testConnection()">Test</button>
+      </div>
+    </header>
+
+    <div class="sections">
+      <!-- Screen Control -->
+      <div class="section">
+        <div class="section-header"><span class="icon">📺</span> Screen Control</div>
+        <div class="section-body">
+          <div class="screen-btns">
+            <button class="btn-secondary" onclick="switchScreen('notifs')">Notifications</button>
+            <button class="btn-secondary" onclick="switchScreen('reminder')">Reminders</button>
+            <button class="btn-secondary" onclick="switchScreen('calendar')">Calendar</button>
+            <button class="btn-secondary" onclick="switchScreen('timer')">Timer</button>
+            <button class="btn-secondary" onclick="switchScreen('todo')">Todo</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Todo List -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)"><span class="icon">✅</span> Todo List <span class="collapse-icon">▼</span></div>
+        <div class="section-body">
+          <div class="item-list">
+            <div class="item-list-header">
+              <span>Tasks</span>
+              <div style="display: flex; gap: 6px;">
+                <button class="btn-primary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="saveTodoInputs()" title="Save changes">⬆ Update</button>
+                <button class="btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="loadTodos()" title="Refresh">↻</button>
+              </div>
+            </div>
+            <div id="todoList" class="todo-inputs"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reminders -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)"><span class="icon">⏰</span> Reminders <span class="collapse-icon">▼</span></div>
+        <div class="section-body">
+          <div class="item-list">
+            <div class="item-list-header">
+              <span>Active Reminders</span>
+              <button class="btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="loadReminders()">↻ Refresh</button>
+            </div>
+            <div id="reminderList"><div class="empty-state">Loading...</div></div>
+          </div>
+          <!-- Collapsible Add Form -->
+          <details class="add-form-details">
+            <summary>➕ Add New Reminder</summary>
+            <div class="add-form-content">
+              <div class="form-grid">
+                <div class="form-group full-width">
+                  <label>Reminder Text</label>
+                  <input type="text" id="reminderMsg" placeholder="Take a break!">
+                </div>
+                <div class="form-group">
+                  <label>Date & Time</label>
+                  <input type="datetime-local" id="reminderTime">
+                </div>
+                <div class="form-group">
+                  <label>Limit (mins)</label>
+                  <input type="number" id="reminderLimit" value="0" min="0">
+                </div>
+                <div class="form-group">
+                  <label>Priority</label>
+                  <select id="reminderPriority">
+                    <option value="normal">Normal</option>
+                    <option value="high">High</option>
+                    <option value="low">Low</option>
+                  </select>
+                </div>
+              </div>
+              <div class="btn-row">
+                <button class="btn-primary" onclick="addReminder()">Add Reminder</button>
+              </div>
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <!-- Notifications (collapsed) -->
+      <div class="section collapsed">
+        <div class="section-header" onclick="toggleSection(this)"><span class="icon">💬</span> Notifications <span class="collapse-icon">▼</span></div>
+        <div class="section-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>App Name</label>
+              <input type="text" id="notifApp" placeholder="Discord">
+            </div>
+            <div class="form-group">
+              <label>From</label>
+              <input type="text" id="notifFrom" placeholder="Username">
+            </div>
+            <div class="form-group">
+              <label>Priority</label>
+              <select id="notifPriority">
+                <option value="">Normal</option>
+                <option value="high">High</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+            <div class="form-group full-width">
+              <label>Message</label>
+              <textarea id="notifMessage" placeholder="Notification message..."></textarea>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn-primary" onclick="sendNotification()">Send Notification</button>
+            <button class="btn-danger" onclick="clearNotifications()">Clear All</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Calendar (collapsed) -->
+      <div class="section collapsed">
+        <div class="section-header" onclick="toggleSection(this)"><span class="icon">📅</span> Calendar Month <span class="collapse-icon">▼</span></div>
+        <div class="section-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Month (1-12)</label>
+              <input type="number" id="calMonth" min="1" max="12" value="1">
+            </div>
+            <div class="form-group">
+              <label>Year</label>
+              <input type="number" id="calYear" value="2026">
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn-primary" onclick="setCalMonth()">Set Month</button>
+            <button class="btn-secondary" onclick="resetCalMonth()">Reset to Current</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Now Playing (collapsed) -->
+      <div class="section collapsed">
+        <div class="section-header" onclick="toggleSection(this)"><span class="icon">🎵</span> Now Playing <span class="collapse-icon">▼</span></div>
+        <div class="section-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Song</label>
+              <input type="text" id="npSong" placeholder="Song Title">
+            </div>
+            <div class="form-group">
+              <label>Artist</label>
+              <input type="text" id="npArtist" placeholder="Artist Name">
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn-primary" onclick="setNowPlaying()">Update</button>
+            <button class="btn-secondary" onclick="clearNowPlaying()">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PC Stats (collapsed) -->
+      <div class="section collapsed">
+        <div class="section-header" onclick="toggleSection(this)"><span class="icon">🎮</span> Gaming Mode & PC Stats <span class="collapse-icon">▼</span></div>
+        <div class="section-body">
+          <div class="btn-row">
+            <button class="btn-success" onclick="setGaming(true)">Gaming ON</button>
+            <button class="btn-danger" onclick="setGaming(false)">Gaming OFF</button>
+          </div>
+          <hr style="border-color: var(--border); margin: 16px 0;">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>CPU Temp (°C)</label>
+              <input type="number" id="cpuTemp" value="45">
+            </div>
+            <div class="form-group">
+              <label>CPU Usage (%)</label>
+              <input type="number" id="cpuUsage" value="30">
+            </div>
+            <div class="form-group">
+              <label>CPU Speed (GHz)</label>
+              <input type="number" id="cpuSpeed" step="0.1" value="3.5">
+            </div>
+            <div class="form-group">
+              <label>RAM Used (GB)</label>
+              <input type="number" id="ramUsed" value="8">
+            </div>
+            <div class="form-group">
+              <label>RAM Total (GB)</label>
+              <input type="number" id="ramTotal" value="32">
+            </div>
+            <div class="form-group">
+              <label>GPU Temp (°C)</label>
+              <input type="number" id="gpuTemp" value="55">
+            </div>
+            <div class="form-group">
+              <label>GPU Usage (%)</label>
+              <input type="number" id="gpuUsage" value="20">
+            </div>
+            <div class="form-group">
+              <label>Net Down (MB/s)</label>
+              <input type="number" id="netDown" step="0.1" value="0">
+            </div>
+            <div class="form-group">
+              <label>Net Up (MB/s)</label>
+              <input type="number" id="netUp" step="0.1" value="0">
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn-primary" onclick="sendPcStats()">Send PC Stats</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Motor Control (collapsed) -->
+      <div class="section collapsed">
+        <div class="section-header" onclick="toggleSection(this)"><span class="icon">⚙️</span> Motor Control <span class="collapse-icon">▼</span></div>
+        <div class="section-body">
+          <div class="form-group">
+            <label>Speed: <span class="slider-value" id="motorSpeedValue">0</span></label>
+            <input type="range" id="motorSpeed" min="0" max="255" value="0" oninput="updateMotorValue()">
+          </div>
+          <div class="btn-row">
+            <button class="btn-primary" onclick="setMotor()">Set Speed</button>
+            <button class="btn-danger" onclick="stopMotor()">Stop</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Response Log (collapsed) -->
+      <div class="section collapsed">
+        <div class="section-header" onclick="toggleSection(this)"><span class="icon">📋</span> Response Log <span class="collapse-icon">▼</span></div>
+        <div class="section-body">
+          <div id="responseLog"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+
+    function getHost() {
+      return $('espHost').value.replace(/\/$/, '');
+    }
+
+    function log(msg, isError = false) {
+      const time = new Date().toLocaleTimeString();
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${isError ? 'error' : 'success'}`;
+      entry.innerHTML = `<span class="time">[${time}]</span>${msg}`;
+      $('responseLog').prepend(entry);
+    }
+
+    async function apiCall(endpoint, method = 'POST', body = null) {
+      try {
+        const url = getHost() + endpoint;
+        const options = { method };
+        
+        if (body) {
+          options.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+          options.body = new URLSearchParams(body).toString();
+        }
+        
+        const res = await fetch(url, options);
+        const text = await res.text();
+        
+        let parsed;
+        try { parsed = JSON.parse(text); } catch { parsed = text; }
+        
+        log(`${method} ${endpoint} → ${JSON.stringify(parsed)}`);
+        return { ok: res.ok, data: parsed };
+      } catch (e) {
+        log(`${method} ${endpoint} → ${e.message}`, true);
+        return { ok: false, error: e.message };
+      }
+    }
+
+    async function testConnection() {
+      const result = await apiCall('/', 'GET');
+      $('statusDot').classList.toggle('connected', result.ok);
+      if (result.ok) {
+        loadReminders();
+        loadTodos();
+      }
+    }
+
+    function toggleSection(header) {
+      header.closest('.section').classList.toggle('collapsed');
+    }
+
+    // Screen
+    function switchScreen(name) {
+      apiCall(`/screen?name=${name}`);
+    }
+
+    // Notifications
+    function sendNotification() {
+      apiCall('/notify', 'POST', {
+        app: $('notifApp').value,
+        from: $('notifFrom').value,
+        message: $('notifMessage').value,
+        priority: $('notifPriority').value
+      });
+    }
+
+    function clearNotifications() {
+      apiCall('/clear');
+    }
+
+    // Reminders
+    async function loadReminders() {
+      const result = await apiCall('/reminders', 'GET');
+      const container = $('reminderList');
+      
+      if (!result.ok || !result.data || !Array.isArray(result.data)) {
+        container.innerHTML = '<div class="empty-state">Could not load reminders</div>';
+        return;
+      }
+      
+      if (result.data.length === 0) {
+        container.innerHTML = '<div class="empty-state">No reminders set</div>';
+        return;
+      }
+      
+      container.innerHTML = result.data.map(r => {
+        const time = new Date(r.when * 1000).toLocaleString();
+        return `
+          <div class="list-item" data-id="${r.id}">
+            <input type="checkbox" onchange="completeReminderById(${r.id})" title="Mark complete">
+            <span class="item-text">${escapeHtml(r.message)}</span>
+            <span class="item-meta">${time}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function completeReminderById(id) {
+      await apiCall('/completeReminder', 'POST', { id });
+      loadReminders();
+    }
+
+    function addReminder() {
+      const dt = $('reminderTime').value;
+      const formatted = dt.replace('T', ' ');
+      
+      apiCall('/addreminder', 'POST', {
+        message: $('reminderMsg').value,
+        time: formatted,
+        limit: $('reminderLimit').value,
+        priority: $('reminderPriority').value
+      }).then(() => loadReminders());
+    }
+
+    // Todo
+    const TODO_ROWS = 10;
+    
+    async function loadTodos() {
+      const result = await apiCall('/todos', 'GET');
+      const container = $('todoList');
+      
+      // Build data map from API response
+      const todoData = {};
+      if (result.ok && Array.isArray(result.data)) {
+        result.data.forEach(t => {
+          todoData[t.index] = t;
+        });
+      }
+      
+      // Render 10 editable rows
+      let html = '';
+      for (let i = 0; i < TODO_ROWS; i++) {
+        const item = todoData[i] || { text: '', completed: false };
+        const completedClass = item.completed ? 'completed' : '';
+        const checkedAttr = item.completed ? 'checked' : '';
+        
+        html += `
+          <div class="todo-row" data-index="${i}">
+            <span class="todo-index">${i}</span>
+            <input type="checkbox" ${checkedAttr} onchange="completeTaskByIndex(${i}, this.checked)" title="Mark complete">
+            <input type="text" id="todo-input-${i}" value="${escapeHtml(item.text)}" 
+                   class="${completedClass}" placeholder="Task ${i}...">
+          </div>
+        `;
+      }
+      container.innerHTML = html;
+    }
+
+    async function completeTaskByIndex(index, checked) {
+      if (checked) {
+        await apiCall('/completeTask', 'POST', { index });
+        loadTodos();
+      }
+    }
+
+    async function saveTodoInputs() {
+      const body = {};
+      let hasContent = false;
+      
+      for (let i = 0; i < TODO_ROWS; i++) {
+        const input = $(`todo-input-${i}`);
+        if (input && input.value.trim()) {
+          body[i] = input.value.trim();
+          hasContent = true;
+        }
+      }
+      
+      if (!hasContent) {
+        log('No tasks to save', true);
+        return;
+      }
+      
+      await apiCall('/todo', 'POST', body);
+      loadTodos();
+    }
+
+    // Now Playing
+    function setNowPlaying() {
+      apiCall('/nowplaying', 'POST', {
+        song: $('npSong').value,
+        artist: $('npArtist').value
+      });
+    }
+
+    function clearNowPlaying() {
+      apiCall('/nowplaying', 'POST', { song: '' });
+    }
+
+    // Calendar
+    function setCalMonth() {
+      apiCall('/calmonth', 'POST', {
+        month: $('calMonth').value,
+        year: $('calYear').value
+      });
+    }
+
+    function resetCalMonth() {
+      apiCall('/calmonth', 'POST', { month: 0, year: 0 });
+    }
+
+    // Motor
+    function updateMotorValue() {
+      $('motorSpeedValue').textContent = $('motorSpeed').value;
+    }
+
+    function setMotor() {
+      apiCall('/motor', 'POST', { speed: $('motorSpeed').value });
+    }
+
+    function stopMotor() {
+      $('motorSpeed').value = 0;
+      updateMotorValue();
+      apiCall('/motor', 'POST', { speed: 0 });
+    }
+
+    // Gaming / PC Stats
+    function setGaming(enabled) {
+      apiCall('/gaming', 'POST', { enabled: enabled ? '1' : '0' });
+    }
+
+    function sendPcStats() {
+      apiCall('/pcstats', 'POST', {
+        cpu_temp: $('cpuTemp').value,
+        cpu_usage: $('cpuUsage').value,
+        cpu_speed: $('cpuSpeed').value,
+        ram_used: $('ramUsed').value,
+        ram_total: $('ramTotal').value,
+        gpu_temp: $('gpuTemp').value,
+        gpu_usage: $('gpuUsage').value,
+        net_down: $('netDown').value,
+        net_up: $('netUp').value
+      });
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Init
+    testConnection();
+  </script>
+</body>
+</html>

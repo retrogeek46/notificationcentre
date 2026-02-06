@@ -15,4 +15,13 @@ void loadReminders();
 // Clear all stored reminders
 void clearStoredReminders();
 
+// Save all todos to flash
+void saveTodos();
+
+// Load todos from flash
+void loadTodos();
+
+// Clear all stored todos
+void clearStoredTodos();
+
 #endif
