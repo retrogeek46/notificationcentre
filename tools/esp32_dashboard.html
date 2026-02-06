@@ -356,6 +356,7 @@
         <span class="status-dot" id="statusDot"></span>
         <input type="text" id="espHost" value="http://192.168.1.246" placeholder="ESP32 Address">
         <button onclick="testConnection()">Test</button>
+        <button class="btn-primary" onclick="clearNotifications()" title="Clear all notifications (same as MX switch)">🧹 Clear</button>
       </div>
     </header>
 
@@ -365,11 +366,11 @@
         <div class="section-header"><span class="icon">📺</span> Screen Control</div>
         <div class="section-body">
           <div class="screen-btns">
-            <button class="btn-secondary" onclick="switchScreen('notifs')">Notifications</button>
+            <button class="btn-secondary" onclick="switchScreen('todo')">Todo</button>
             <button class="btn-secondary" onclick="switchScreen('reminder')">Reminders</button>
+            <button class="btn-secondary" onclick="switchScreen('notifs')">Notifications</button>
             <button class="btn-secondary" onclick="switchScreen('calendar')">Calendar</button>
             <button class="btn-secondary" onclick="switchScreen('timer')">Timer</button>
-            <button class="btn-secondary" onclick="switchScreen('todo')">Todo</button>
           </div>
         </div>
       </div>
@@ -486,6 +487,29 @@
           <div class="btn-row">
             <button class="btn-primary" onclick="setCalMonth()">Set Month</button>
             <button class="btn-secondary" onclick="resetCalMonth()">Reset to Current</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Timer (collapsed) -->
+      <div class="section collapsed">
+        <div class="section-header" onclick="toggleSection(this)"><span class="icon">⏱️</span> Timer <span class="collapse-icon">▼</span></div>
+        <div class="section-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Minutes (0-60)</label>
+              <input type="number" id="timerMinutes" min="0" max="60" value="5">
+            </div>
+            <div class="form-group">
+              <label>Status</label>
+              <div id="timerStatus" style="padding: 8px; background: var(--bg-tertiary); border-radius: 6px; font-size: 0.85rem;">--</div>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn-primary" onclick="setTimer()">Set</button>
+            <button class="btn-primary" onclick="startTimer()">▶ Start</button>
+            <button class="btn-danger" onclick="stopTimer()">⏹ Stop</button>
+            <button class="btn-secondary" onclick="getTimerStatus()">↻</button>
           </div>
         </div>
       </div>
@@ -788,6 +812,43 @@
 
     function resetCalMonth() {
       apiCall('/calmonth', 'POST', { month: 0, year: 0 });
+    }
+
+    // Timer
+    function setTimer() {
+      apiCall('/timer', 'POST', { minutes: $('timerMinutes').value }).then(getTimerStatus);
+    }
+
+    function startTimer() {
+      apiCall('/timer/start', 'POST').then(getTimerStatus);
+    }
+
+    function stopTimer() {
+      apiCall('/timer/stop', 'POST').then(getTimerStatus);
+    }
+
+    async function getTimerStatus() {
+      const result = await apiCall('/timer', 'GET');
+      const status = $('timerStatus');
+      
+      if (!result.ok || !result.data) {
+        status.textContent = 'Error';
+        return;
+      }
+      
+      const d = result.data;
+      if (d.running) {
+        const mins = Math.floor(d.remainingSeconds / 60);
+        const secs = d.remainingSeconds % 60;
+        status.textContent = `⏳ Running: ${mins}:${secs.toString().padStart(2, '0')}`;
+        status.style.color = 'var(--accent-green)';
+      } else if (d.complete) {
+        status.textContent = '🔔 Complete!';
+        status.style.color = 'var(--accent-danger)';
+      } else {
+        status.textContent = `⏸ Stopped (${d.minutes} min set)`;
+        status.style.color = 'var(--text-secondary)';
+      }
     }
 
     // Motor

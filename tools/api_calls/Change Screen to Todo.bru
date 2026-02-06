@@ -1,0 +1,16 @@
+meta {
+  name: Change Screen to Todo
+  type: http
+  seq: 21
+}
+
+post {
+  url: http://{{notif_url}}/screen?name=todo
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

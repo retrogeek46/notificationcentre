@@ -23,5 +23,9 @@ void handleCalendarMonth(AsyncWebServerRequest* request);
 void handleTodoList(AsyncWebServerRequest* request);
 void handleListTodos(AsyncWebServerRequest* request);
 void handleCompleteTask(AsyncWebServerRequest* request);
+void handleTimerSet(AsyncWebServerRequest* request);
+void handleTimerStart(AsyncWebServerRequest* request);
+void handleTimerStop(AsyncWebServerRequest* request);
+void handleTimerStatus(AsyncWebServerRequest* request);
 
 #endif

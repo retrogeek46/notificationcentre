@@ -43,6 +43,12 @@ void setupApiRoutes() {
   server.on("/todos", HTTP_GET, handleListTodos);
   server.on("/completeTask", HTTP_POST, handleCompleteTask);
 
+  // Timer
+  server.on("/timer", HTTP_POST, handleTimerSet);
+  server.on("/timer/start", HTTP_POST, handleTimerStart);
+  server.on("/timer/stop", HTTP_POST, handleTimerStop);
+  server.on("/timer", HTTP_GET, handleTimerStatus);
+
   // Root
   server.on("/", HTTP_GET, handleRoot);
 
@@ -520,5 +526,60 @@ void handleListTodos(AsyncWebServerRequest* request) {
   }
   
   json += "]";
+  request->send(200, "application/json", json);
+}
+
+// ==================== Timer Handlers ====================
+void handleTimerSet(AsyncWebServerRequest* request) {
+  String minutesStr = request->hasParam("minutes", true) ? request->getParam("minutes", true)->value()
+                                                         : (request->hasParam("minutes") ? request->getParam("minutes")->value() : "");
+  
+  if (minutesStr.length() == 0) {
+    request->send(400, "application/json", "{\"error\":\"Missing minutes\"}");
+    return;
+  }
+  
+  int minutes = minutesStr.toInt();
+  if (minutes < 0 || minutes > 60) {
+    request->send(400, "application/json", "{\"error\":\"Minutes must be 0-60\"}");
+    return;
+  }
+  
+  timerMinutes = minutes;
+  currentScreen = SCREEN_TIMER;
+  setAllZonesDirty();
+  
+  Serial.printf("Timer set to %d minutes via API\n", minutes);
+  request->send(200, "application/json", "{\"status\":\"ok\",\"minutes\":" + String(minutes) + "}");
+}
+
+void handleTimerStart(AsyncWebServerRequest* request) {
+  if (timerMinutes <= 0) {
+    request->send(400, "application/json", "{\"error\":\"Set minutes first\"}");
+    return;
+  }
+  
+  startTimer();
+  request->send(200, "application/json", "{\"status\":\"started\",\"minutes\":" + String(timerMinutes) + "}");
+}
+
+void handleTimerStop(AsyncWebServerRequest* request) {
+  stopTimer();
+  request->send(200, "application/json", "{\"status\":\"stopped\"}");
+}
+
+void handleTimerStatus(AsyncWebServerRequest* request) {
+  String json = "{";
+  json += "\"running\":" + String(timerRunning ? "true" : "false");
+  json += ",\"minutes\":" + String(timerMinutes);
+  
+  if (timerRunning && timerEndMs > millis()) {
+    unsigned long remaining = timerEndMs - millis();
+    json += ",\"remainingSeconds\":" + String(remaining / 1000);
+  }
+  
+  json += ",\"complete\":" + String(timerComplete ? "true" : "false");
+  json += "}";
+  
   request->send(200, "application/json", json);
 }
