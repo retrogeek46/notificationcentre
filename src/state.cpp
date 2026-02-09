@@ -58,6 +58,7 @@ unsigned long timerEndMs = 0;   // When timer should end
 int timerOriginalMinutes = 0;   // Original duration for reference
 bool timerComplete = false;     // Timer just completed
 unsigned long timerCompleteStartMs = 0;  // When completion started
+char timerLabel[32] = "";       // Label text above timer circle
 
 // ==================== Helper Functions ====================
 void initState() {
@@ -96,6 +97,7 @@ void initState() {
   timerOriginalMinutes = 0;
   timerComplete = false;
   timerCompleteStartMs = 0;
+  timerLabel[0] = '\0';  // Clear timer label
   // Reset todos
   for (int i = 0; i < MAX_TODO_ITEMS; i++) {
     todoItems[i] = TodoItem();

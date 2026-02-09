@@ -144,19 +144,21 @@
 #define TIMER_FLASH_INTERVAL 5000         // Flash timer in status zone every 5 seconds
 #define TIMER_FLASH_DURATION 1000         // Show timer for 1 second during flash
 #define TIMER_COMPLETE_FLASH_MS 500       // LED flash interval when timer completes
-#define TIMER_DIAL_RADIUS 75              // Radius of the circular dial
+#define TIMER_DIAL_RADIUS 60              // Radius of the circular dial (reduced for label)
 #define TIMER_DIAL_CX 160                 // Center X of dial (middle of 320px screen)
-#define TIMER_DIAL_CY 130                 // Center Y of dial (middle of content zones)
-#define TIMER_TICK_INNER 68               // Inner radius for minute tick marks
-#define TIMER_TICK_OUTER 75               // Outer radius for minute tick marks
-#define TIMER_TICK_MAJOR_INNER 62         // Inner radius for 5-min ticks
-#define TIMER_ARC_INNER 30                // Inner radius for filled arc
-#define TIMER_ARC_OUTER 65                // Outer radius for filled arc
-#define TIMER_CENTER_TEXT_W 40            // Half-width of center text clear area
-#define TIMER_CENTER_TEXT_H 15            // Half-height of center text clear area
+#define TIMER_DIAL_CY 145                 // Center Y of dial (pushed down for label)
+#define TIMER_TICK_INNER 53               // Inner radius for minute tick marks
+#define TIMER_TICK_OUTER 60               // Outer radius for minute tick marks
+#define TIMER_TICK_MAJOR_INNER 48         // Inner radius for 5-min ticks
+#define TIMER_ARC_INNER 24                // Inner radius for filled arc
+#define TIMER_ARC_OUTER 50                // Outer radius for filled arc
+#define TIMER_CENTER_TEXT_W 35            // Half-width of center text clear area
+#define TIMER_CENTER_TEXT_H 12            // Half-height of center text clear area
 #define TIMER_INSTR_HALF_W 150            // Half-width of instruction text area
 #define TIMER_INSTR_Y_CLEAR 5             // Y offset for instruction clear rect
 #define TIMER_INSTR_Y_TEXT 15             // Y offset for instruction text
+#define TIMER_LABEL_Y 55                  // Y position for label text (above circle)
+#define TIMER_LABEL_MAX_CHARS 30          // Max characters for timer label
 
 // ===== UI Colors =====
 // Include TFT_eSPI before this header to use these
@@ -209,7 +211,7 @@
 #define COLOR_TIMER_DIAL TFT_DARKGREY     // Dial tick marks
 #define COLOR_TIMER_FILL TFT_CYAN         // Filled arc for selected time
 #define COLOR_TIMER_TEXT TFT_WHITE        // Center time display
-#define COLOR_TIMER_RUNNING TFT_NAVY      // Running indicator
+#define COLOR_TIMER_RUNNING TFT_WHITE      // Running indicator
 #define COLOR_TIMER_COMPLETE TFT_RED      // Flash color when complete
 
 // Todo colors

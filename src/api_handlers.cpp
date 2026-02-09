@@ -8,6 +8,7 @@
 #include "led_control.h"
 #include "motor_control.h"
 #include "storage.h"
+#include "dashboard_html.h"
 
 AsyncWebServer server(80);
 
@@ -43,13 +44,15 @@ void setupApiRoutes() {
   server.on("/todos", HTTP_GET, handleListTodos);
   server.on("/completeTask", HTTP_POST, handleCompleteTask);
 
-  // Timer
-  server.on("/timer", HTTP_POST, handleTimerSet);
+  // Timer (more specific routes first)
   server.on("/timer/start", HTTP_POST, handleTimerStart);
   server.on("/timer/stop", HTTP_POST, handleTimerStop);
+  server.on("/timer/label", HTTP_POST, handleTimerLabel);
+  server.on("/timer", HTTP_POST, handleTimerSet);
   server.on("/timer", HTTP_GET, handleTimerStatus);
 
-  // Root
+  // Root and Dashboard
+  server.on("/dashboard", HTTP_GET, handleDashboard);
   server.on("/", HTTP_GET, handleRoot);
 
   // Enable CORS for local dashboard
@@ -318,17 +321,17 @@ void handleScreenSwitch(AsyncWebServerRequest* request) {
 
 // ==================== Root Handler ====================
 void handleRoot(AsyncWebServerRequest* request) {
-  String html = "<h1>Notification Center</h1>";
-  html += "<p>Use <b>/addreminder</b> POST to add reminders</p>";
-  html += "<p>Use <b>/reminders</b> GET to list reminders</p>";
-  html += "<p>Use <b>/completeReminder?id=...</b> POST to mark done</p>";
-  html += "<p>Use <b>/screen?name=notifs|reminder|calendar|timer</b> POST to switch</p>";
-  html += "<p>Use <b>/nowplaying</b> POST with song, artist</p>";
-  html += "<p>Use <b>/motor</b> POST with speed=0..255</p>";
-  html += "<p>Use <b>/gaming</b> POST with enabled=0|1</p>";
-  html += "<p>Use <b>/pcstats</b> POST with cpu_temp, cpu_usage, cpu_speed, ram_used, ram_total, gpu_temp, gpu_usage, net_speed</p>";
-  html += "<p>Use <b>/calmonth</b> POST with month=1-12, year=YYYY (0 to reset to current)</p>";
-  request->send(200, "text/html", html);
+  // Redirect to dashboard
+  request->redirect("/dashboard");
+}
+
+// ==================== Dashboard Handler (Gzipped) ====================
+void handleDashboard(AsyncWebServerRequest* request) {
+  AsyncWebServerResponse* response = request->beginResponse_P(
+    200, "text/html", DASHBOARD_HTML_GZ, DASHBOARD_HTML_GZ_LEN
+  );
+  response->addHeader("Content-Encoding", "gzip");
+  request->send(response);
 }
 
 // ==================== Motor Handler ====================
@@ -579,7 +582,33 @@ void handleTimerStatus(AsyncWebServerRequest* request) {
   }
   
   json += ",\"complete\":" + String(timerComplete ? "true" : "false");
+  json += ",\"label\":\"";
+  // Escape label text
+  String labelText = String(timerLabel);
+  labelText.replace("\"", "\\\"");
+  json += labelText;
+  json += "\"";
   json += "}";
   
   request->send(200, "application/json", json);
+}
+
+void handleTimerLabel(AsyncWebServerRequest* request) {
+  String label = request->hasParam("label", true) ? request->getParam("label", true)->value()
+                                                   : (request->hasParam("label") ? request->getParam("label")->value() : "");
+  
+  // Truncate to max length
+  if (label.length() > TIMER_LABEL_MAX_CHARS) {
+    label = label.substring(0, TIMER_LABEL_MAX_CHARS);
+  }
+  
+  strncpy(timerLabel, label.c_str(), sizeof(timerLabel) - 1);
+  timerLabel[sizeof(timerLabel) - 1] = '\0';
+  
+  // Force redraw of timer screen
+  resetTimerScreen();
+  setAllContentDirty();
+  
+  Serial.printf("Timer label set: %s\n", timerLabel);
+  request->send(200, "application/json", "{\"status\":\"ok\",\"label\":\"" + label + "\"}");
 }

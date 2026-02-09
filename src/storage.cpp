@@ -16,16 +16,29 @@ struct ReminderStorage {
   int reviewCount;
 };
 
-static Preferences prefs;
+static Preferences reminderPrefs;
+static bool reminderPrefsInitialized = false;
+
+static void ensureReminderPrefs() {
+  if (!reminderPrefsInitialized) {
+    reminderPrefs.begin("reminders", false);
+    reminderPrefsInitialized = true;
+  }
+}
 
 void initStorage() {
-  prefs.begin("reminders", false);  // false = read/write mode
+  // Load persisted data
   loadReminders();
   loadTodos();
+  
+  // Set initial screen based on loaded data (e.g., show Todo if unfinished tasks exist)
+  currentScreen = getDefaultScreen();
+  
   Serial.println("Storage initialized");
 }
 
 void saveReminders() {
+  ensureReminderPrefs();
   ReminderStorage storage[MAX_REMINDERS];
 
   // Convert from Reminder to ReminderStorage
@@ -43,25 +56,26 @@ void saveReminders() {
   }
 
   // Save as bytes
-  prefs.putBytes("data", storage, sizeof(storage));
-  prefs.putInt("nextId", nextReminderId);
+  reminderPrefs.putBytes("data", storage, sizeof(storage));
+  reminderPrefs.putInt("nextId", nextReminderId);
 
   Serial.println("Reminders saved to flash");
 }
 
 void loadReminders() {
+  ensureReminderPrefs();
   ReminderStorage storage[MAX_REMINDERS];
 
   // Check if data exists
-  size_t len = prefs.getBytesLength("data");
+  size_t len = reminderPrefs.getBytesLength("data");
   if (len == 0) {
     Serial.println("No stored reminders found");
     return;
   }
 
   // Load bytes
-  prefs.getBytes("data", storage, sizeof(storage));
-  nextReminderId = prefs.getInt("nextId", 1);
+  reminderPrefs.getBytes("data", storage, sizeof(storage));
+  nextReminderId = reminderPrefs.getInt("nextId", 1);
 
   // Convert from ReminderStorage to Reminder
   int loadedCount = 0;
@@ -89,8 +103,9 @@ void loadReminders() {
 }
 
 void clearStoredReminders() {
-  prefs.remove("data");
-  prefs.remove("nextId");
+  ensureReminderPrefs();
+  reminderPrefs.remove("data");
+  reminderPrefs.remove("nextId");
   Serial.println("Stored reminders cleared");
 }
 

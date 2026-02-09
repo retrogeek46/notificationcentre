@@ -368,9 +368,9 @@
           <div class="screen-btns">
             <button class="btn-secondary" onclick="switchScreen('todo')">Todo</button>
             <button class="btn-secondary" onclick="switchScreen('reminder')">Reminders</button>
+            <button class="btn-secondary" onclick="switchScreen('timer')">Timer</button>
             <button class="btn-secondary" onclick="switchScreen('notifs')">Notifications</button>
             <button class="btn-secondary" onclick="switchScreen('calendar')">Calendar</button>
-            <button class="btn-secondary" onclick="switchScreen('timer')">Timer</button>
           </div>
         </div>
       </div>
@@ -437,9 +437,39 @@
         </div>
       </div>
 
+      <!-- Timer (open by default) -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)"><span class="icon">⏱️</span> Timer <span class="collapse-icon">▼</span></div>
+        <div class="section-body">
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label>Label (displayed above timer) <span id="timerLabelCount" style="color: var(--text-secondary); font-weight: normal;">0/30</span></label>
+              <div style="display: flex; gap: 8px;">
+                <input type="text" id="timerLabel" placeholder="Focus time..." maxlength="30" style="flex: 1;" oninput="updateLabelCount()">
+                <button class="btn-primary" onclick="setTimerLabel()" style="white-space: nowrap;">Set Label</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Minutes (0-60)</label>
+              <input type="number" id="timerMinutes" min="0" max="60" value="5">
+            </div>
+            <div class="form-group">
+              <label>Status</label>
+              <div id="timerStatus" style="padding: 8px; background: var(--bg-tertiary); border-radius: 6px; font-size: 0.85rem;">--</div>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn-primary" onclick="setTimer()">Set</button>
+            <button class="btn-primary" onclick="startTimer()">▶ Start</button>
+            <button class="btn-danger" onclick="stopTimer()">⏹ Stop</button>
+            <button class="btn-secondary" onclick="getTimerStatus()">↻</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Notifications (collapsed) -->
       <div class="section collapsed">
-        <div class="section-header" onclick="toggleSection(this)"><span class="icon">💬</span> Notifications <span class="collapse-icon">▼</span></div>
+        <div class="section-header" onclick="toggleSection(this)"><span class="icon">�</span> Notifications <span class="collapse-icon">▼</span></div>
         <div class="section-body">
           <div class="form-grid">
             <div class="form-group">
@@ -491,27 +521,6 @@
         </div>
       </div>
 
-      <!-- Timer (collapsed) -->
-      <div class="section collapsed">
-        <div class="section-header" onclick="toggleSection(this)"><span class="icon">⏱️</span> Timer <span class="collapse-icon">▼</span></div>
-        <div class="section-body">
-          <div class="form-grid">
-            <div class="form-group">
-              <label>Minutes (0-60)</label>
-              <input type="number" id="timerMinutes" min="0" max="60" value="5">
-            </div>
-            <div class="form-group">
-              <label>Status</label>
-              <div id="timerStatus" style="padding: 8px; background: var(--bg-tertiary); border-radius: 6px; font-size: 0.85rem;">--</div>
-            </div>
-          </div>
-          <div class="btn-row">
-            <button class="btn-primary" onclick="setTimer()">Set</button>
-            <button class="btn-primary" onclick="startTimer()">▶ Start</button>
-            <button class="btn-danger" onclick="stopTimer()">⏹ Stop</button>
-            <button class="btn-secondary" onclick="getTimerStatus()">↻</button>
-          </div>
-        </div>
       </div>
 
       <!-- Now Playing (collapsed) -->
@@ -700,12 +709,11 @@
       }
       
       container.innerHTML = result.data.map(r => {
-        const time = new Date(r.when * 1000).toLocaleString();
         return `
           <div class="list-item" data-id="${r.id}">
             <input type="checkbox" onchange="completeReminderById(${r.id})" title="Mark complete">
             <span class="item-text">${escapeHtml(r.message)}</span>
-            <span class="item-meta">${time}</span>
+            <span class="item-meta">#${r.id} • ${r.time}</span>
           </div>
         `;
       }).join('');
@@ -849,6 +857,21 @@
         status.textContent = `⏸ Stopped (${d.minutes} min set)`;
         status.style.color = 'var(--text-secondary)';
       }
+      
+      // Update label field if present in response
+      if (d.label !== undefined) {
+        $('timerLabel').value = d.label;
+        updateLabelCount();
+      }
+    }
+
+    function setTimerLabel() {
+      apiCall('/timer/label', 'POST', { label: $('timerLabel').value });
+    }
+
+    function updateLabelCount() {
+      const len = $('timerLabel').value.length;
+      $('timerLabelCount').textContent = len + '/30';
     }
 
     // Motor

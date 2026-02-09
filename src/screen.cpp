@@ -429,7 +429,8 @@ void drawNowPlaying() {
   bool isIdleMode = !nowPlayingActive && pcStatsStale;  // Idle disc would normally show
 
   // Check if timer is running and should show in status zone
-  if (timerRunning && timerEndMs > millis()) {
+  // Skip if already on timer screen (timer dial is visible)
+  if (timerRunning && timerEndMs > millis() && currentScreen != SCREEN_TIMER) {
     unsigned long now = millis();
     bool shouldShowTimer = false;
 

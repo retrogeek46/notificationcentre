@@ -29,6 +29,15 @@ void drawTimerContent() {
                  ZONE_CONTENT3_Y_END - ZONE_CONTENT1_Y_START + 1,
                  COLOR_BACKGROUND);
 
+    // Draw timer label text above the circle
+    if (timerLabel[0] != '\0') {
+      tft.setFreeFont(&MDIOTrial_Bold10pt7b);
+      tft.setTextDatum(MC_DATUM);
+      tft.setTextColor(TFT_YELLOW);
+      tft.drawString(timerLabel, cx, TIMER_LABEL_Y);
+      tft.setTextDatum(TL_DATUM);
+    }
+
     // Draw dial circles (static - only on first draw)
     tft.drawCircle(cx, cy, TIMER_DIAL_RADIUS, COLOR_TIMER_DIAL);
     tft.drawCircle(cx, cy, TIMER_DIAL_RADIUS - 1, COLOR_TIMER_DIAL);
@@ -51,6 +60,7 @@ void drawTimerContent() {
     timerFirstDraw = false;
     timerLastDisplayedMinutes = -1;  // Force arc redraw
   }
+
 
   // Only redraw arc if minutes changed
   int displayMinutes = timerMinutes;

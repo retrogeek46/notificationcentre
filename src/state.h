@@ -63,6 +63,7 @@ extern unsigned long timerEndMs;       // When timer should end (millis)
 extern int timerOriginalMinutes;       // Original duration for reference
 extern bool timerComplete;             // Timer just completed, flash LED
 extern unsigned long timerCompleteStartMs;  // When completion started
+extern char timerLabel[32];            // Label text above timer circle
 
 // ==================== Todo List ====================
 #define MAX_TODO_ITEMS 20

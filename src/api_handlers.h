@@ -27,5 +27,7 @@ void handleTimerSet(AsyncWebServerRequest* request);
 void handleTimerStart(AsyncWebServerRequest* request);
 void handleTimerStop(AsyncWebServerRequest* request);
 void handleTimerStatus(AsyncWebServerRequest* request);
+void handleTimerLabel(AsyncWebServerRequest* request);
+void handleDashboard(AsyncWebServerRequest* request);
 
 #endif
