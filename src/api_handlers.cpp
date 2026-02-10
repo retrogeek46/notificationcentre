@@ -43,6 +43,7 @@ void setupApiRoutes() {
   server.on("/todo", HTTP_POST, handleTodoList);
   server.on("/todos", HTTP_GET, handleListTodos);
   server.on("/completeTask", HTTP_POST, handleCompleteTask);
+  server.on("/deleteTask", HTTP_POST, handleDeleteTask);
 
   // Timer (more specific routes first)
   server.on("/timer/start", HTTP_POST, handleTimerStart);
@@ -447,17 +448,27 @@ void handleTodoList(AsyncWebServerRequest* request) {
       taskText = request->getParam(paramName)->value();
     }
     
-    if (taskText.length() > 0) {
+    // Only process if the param was actually present in the request
+    if (request->hasParam(paramName, true) || request->hasParam(paramName)) {
       taskText.trim();
-      todoItems[i].text = taskText;
-      todoItems[i].completed = false;
       
-      // Expand count if needed
-      if (i >= todoItemCount) {
-        todoItemCount = i + 1;
+      if (taskText.length() > 0) {
+        // Set or overwrite task
+        todoItems[i].text = taskText;
+        todoItems[i].completed = false;
+        
+        // Expand count if needed
+        if (i >= todoItemCount) {
+          todoItemCount = i + 1;
+        }
+        
+        Serial.printf("Todo[%d] = %s\n", i, taskText.c_str());
+      } else {
+        // Clear the task
+        todoItems[i].text = "";
+        todoItems[i].completed = false;
+        Serial.printf("Todo[%d] cleared\n", i);
       }
-      
-      Serial.printf("Todo[%d] = %s\n", i, taskText.c_str());
       updatedCount++;
     }
   }
@@ -505,6 +516,40 @@ void handleCompleteTask(AsyncWebServerRequest* request) {
   saveTodos();  // Persist to flash
   
   request->send(200, "application/json", "{\"status\":\"completed\",\"index\":" + String(index) + "}");
+}
+
+// ==================== Delete Task Handler ====================
+void handleDeleteTask(AsyncWebServerRequest* request) {
+  String indexStr = request->hasParam("index", true) ? request->getParam("index", true)->value()
+                                                     : (request->hasParam("index") ? request->getParam("index")->value() : "");
+  
+  if (indexStr.length() == 0) {
+    request->send(400, "application/json", "{\"error\":\"Missing index\"}");
+    return;
+  }
+  
+  int index = indexStr.toInt();
+  
+  if (index < 0 || index >= todoItemCount) {
+    request->send(400, "application/json", "{\"error\":\"Invalid index\"}");
+    return;
+  }
+  
+  Serial.printf("Deleting task %d: %s\n", index, todoItems[index].text.c_str());
+  
+  // Shift remaining items up
+  for (int i = index; i < todoItemCount - 1; i++) {
+    todoItems[i] = todoItems[i + 1];
+  }
+  
+  // Clear last slot and decrease count
+  todoItemCount--;
+  todoItems[todoItemCount] = TodoItem();
+  
+  setAllContentDirty();
+  saveTodos();  // Persist to flash
+  
+  request->send(200, "application/json", "{\"status\":\"deleted\",\"index\":" + String(index) + ",\"count\":" + String(todoItemCount) + "}");
 }
 
 // ==================== List Todos Handler ====================

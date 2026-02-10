@@ -128,6 +128,7 @@ void checkReminders() {
       currentScreen = SCREEN_REMINDER;
       setZoneDirty(ZONE_TITLE);
       setAllContentDirty();
+      saveReminders();  // Persist triggered state to flash
     }
     // Follow-up trigger
     else if (r.triggered && r.limitMinutes > 0 && r.nextReviewTime != 0 && now >= r.nextReviewTime) {
@@ -137,6 +138,7 @@ void checkReminders() {
 
       blinkLed(2, 100);
       setAllContentDirty();
+      saveReminders();  // Persist follow-up state to flash
     }
   }
 }

@@ -85,7 +85,7 @@ void drawTimerContent() {
 
     // Draw filled arc for selected/remaining time
     if (displayMinutes > 0) {
-      float endAngle = (displayMinutes * 6.0);
+      float endAngle = (displayMinutes * (360.0 / TIMER_MAX_MINUTES));
       for (float a = 0; a < endAngle; a += 1.0) {
         float rad = (a - 90) * PI / 180.0;
         for (int r = TIMER_ARC_INNER; r <= TIMER_ARC_OUTER; r += 2) {

@@ -140,7 +140,7 @@
 #define NTP_TIMEZONE_OFFSET (5.5 * 3600)  // IST +5:30
 
 // ===== Timer Configuration =====
-#define TIMER_MAX_MINUTES 60              // Maximum timer duration
+#define TIMER_MAX_MINUTES 120             // Maximum timer duration (2 hours)
 #define TIMER_FLASH_INTERVAL 5000         // Flash timer in status zone every 5 seconds
 #define TIMER_FLASH_DURATION 1000         // Show timer for 1 second during flash
 #define TIMER_COMPLETE_FLASH_MS 500       // LED flash interval when timer completes

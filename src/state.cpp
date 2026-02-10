@@ -150,6 +150,9 @@ bool hasUnfinishedTodos() {
 }
 
 Screen getDefaultScreen() {
+  if (timerRunning) {
+    return SCREEN_TIMER;
+  }
   if (hasUnfinishedTodos()) {
     return SCREEN_TODO;
   }

@@ -23,6 +23,7 @@ void handleCalendarMonth(AsyncWebServerRequest* request);
 void handleTodoList(AsyncWebServerRequest* request);
 void handleListTodos(AsyncWebServerRequest* request);
 void handleCompleteTask(AsyncWebServerRequest* request);
+void handleDeleteTask(AsyncWebServerRequest* request);
 void handleTimerSet(AsyncWebServerRequest* request);
 void handleTimerStart(AsyncWebServerRequest* request);
 void handleTimerStop(AsyncWebServerRequest* request);
