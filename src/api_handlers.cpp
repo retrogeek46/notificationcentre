@@ -588,8 +588,8 @@ void handleTimerSet(AsyncWebServerRequest* request) {
   }
   
   int minutes = minutesStr.toInt();
-  if (minutes < 0 || minutes > 60) {
-    request->send(400, "application/json", "{\"error\":\"Minutes must be 0-60\"}");
+  if (minutes < 0 || minutes > TIMER_MAX_MINUTES) {
+    request->send(400, "application/json", "{\"error\":\"Minutes must be 0-" + String(TIMER_MAX_MINUTES) + "\"}");
     return;
   }
   

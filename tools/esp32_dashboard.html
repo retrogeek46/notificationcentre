@@ -313,6 +313,23 @@
       text-align: right;
     }
     
+    .todo-row .btn-delete {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 2px 6px;
+      font-size: 0.85rem;
+      opacity: 0.5;
+      transition: opacity 0.2s, color 0.2s;
+      flex-shrink: 0;
+    }
+    .todo-row .btn-delete:hover {
+      opacity: 1;
+      color: var(--accent-red);
+      transform: none;
+    }
+    
     /* Slider */
     input[type="range"] {
       -webkit-appearance: none;
@@ -450,8 +467,8 @@
               </div>
             </div>
             <div class="form-group">
-              <label>Minutes (0-60)</label>
-              <input type="number" id="timerMinutes" min="0" max="60" value="5">
+              <label>Minutes (0-120)</label>
+              <input type="number" id="timerMinutes" min="0" max="120" value="5">
             </div>
             <div class="form-group">
               <label>Status</label>
@@ -764,6 +781,7 @@
             <input type="checkbox" ${checkedAttr} onchange="completeTaskByIndex(${i}, this.checked)" title="Mark complete">
             <input type="text" id="todo-input-${i}" value="${escapeHtml(item.text)}" 
                    class="${completedClass}" placeholder="Task ${i}...">
+            <button class="btn-delete" onclick="deleteTodoByIndex(${i})" title="Delete task">🗑</button>
           </div>
         `;
       }
@@ -779,22 +797,27 @@
 
     async function saveTodoInputs() {
       const body = {};
-      let hasContent = false;
+      let hasChanges = false;
       
       for (let i = 0; i < TODO_ROWS; i++) {
         const input = $(`todo-input-${i}`);
-        if (input && input.value.trim()) {
+        if (input) {
           body[i] = input.value.trim();
-          hasContent = true;
+          hasChanges = true;
         }
       }
       
-      if (!hasContent) {
+      if (!hasChanges) {
         log('No tasks to save', true);
         return;
       }
       
       await apiCall('/todo', 'POST', body);
+      loadTodos();
+    }
+
+    async function deleteTodoByIndex(index) {
+      await apiCall('/deleteTask', 'POST', { index });
       loadTodos();
     }
 
