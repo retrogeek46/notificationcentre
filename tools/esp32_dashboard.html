@@ -481,6 +481,14 @@
             <button class="btn-danger" onclick="stopTimer()">⏹ Stop</button>
             <button class="btn-secondary" onclick="getTimerStatus()">↻</button>
           </div>
+          <hr style="border-color: var(--border); margin: 16px 0;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-weight: 600;">🎯 Focus Mode</span>
+            <span id="focusBadge" style="padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; background: var(--bg-tertiary); color: var(--text-secondary);">OFF</span>
+            <button class="btn-success" onclick="setFocusMode('on')" style="padding: 4px 12px; font-size: 0.8rem;">ON</button>
+            <button class="btn-danger" onclick="setFocusMode('off')" style="padding: 4px 12px; font-size: 0.8rem;">OFF</button>
+            <span id="focusPcIP" style="font-size: 0.75rem; color: var(--text-secondary); margin-left: auto;"></span>
+          </div>
         </div>
       </div>
 
@@ -684,6 +692,7 @@
       if (result.ok) {
         loadReminders();
         loadTodos();
+        getFocusStatus();
       }
     }
 
@@ -895,6 +904,34 @@
     function updateLabelCount() {
       const len = $('timerLabel').value.length;
       $('timerLabelCount').textContent = len + '/30';
+    }
+
+    // Focus Mode
+    function setFocusMode(state) {
+      apiCall('/focus', 'POST', { focus: state }).then(getFocusStatus);
+    }
+
+    async function getFocusStatus() {
+      const result = await apiCall('/focus', 'GET');
+      const badge = $('focusBadge');
+      const pcIP = $('focusPcIP');
+
+      if (!result.ok || !result.data) return;
+
+      const d = result.data;
+      if (d.focus) {
+        badge.textContent = 'ON';
+        badge.style.background = 'var(--accent-green)';
+        badge.style.color = 'white';
+      } else {
+        badge.textContent = 'OFF';
+        badge.style.background = 'var(--bg-tertiary)';
+        badge.style.color = 'var(--text-secondary)';
+      }
+
+      if (d.pcIP) {
+        pcIP.textContent = 'PC: ' + d.pcIP;
+      }
     }
 
     // Motor

@@ -30,5 +30,7 @@ void handleTimerStop(AsyncWebServerRequest* request);
 void handleTimerStatus(AsyncWebServerRequest* request);
 void handleTimerLabel(AsyncWebServerRequest* request);
 void handleDashboard(AsyncWebServerRequest* request);
+void handleFocusMode(AsyncWebServerRequest* request);
+void handleFocusStatus(AsyncWebServerRequest* request);
 
 #endif

@@ -60,6 +60,10 @@ bool timerComplete = false;     // Timer just completed
 unsigned long timerCompleteStartMs = 0;  // When completion started
 char timerLabel[32] = "";       // Label text above timer circle
 
+// ==================== Focus Mode ====================
+bool focusMode = false;         // Is focus mode active?
+String pcClientIP = "";         // PC IP (auto-detected from incoming requests)
+
 // ==================== Helper Functions ====================
 void initState() {
   currentScreen = DEFAULT_SCREEN;
@@ -98,6 +102,8 @@ void initState() {
   timerComplete = false;
   timerCompleteStartMs = 0;
   timerLabel[0] = '\0';  // Clear timer label
+  // Reset focus mode
+  focusMode = false;
   // Reset todos
   for (int i = 0; i < MAX_TODO_ITEMS; i++) {
     todoItems[i] = TodoItem();

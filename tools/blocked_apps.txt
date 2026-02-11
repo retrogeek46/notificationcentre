@@ -1,0 +1,6 @@
+# Blocked executables (exact match against process name)
+discord.exe
+
+# Blocked window title keywords (matches browser tabs, etc.)
+# These are case-insensitive partial matches against the active window title
+YouTube

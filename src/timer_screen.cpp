@@ -3,6 +3,7 @@
 #include "config.h"
 #include "led_control.h"
 #include "screen.h"
+#include "focus_control.h"
 #include "fonts/MDIOTrial_Bold10pt7b.h"
 #include "fonts/MDIOTrial_Regular9pt7b.h"
 #include <TFT_eSPI.h>
@@ -187,6 +188,7 @@ void updateTimerTick() {
     lastLedFlash = now;
     ledFlashState = true;
     setLedColor(255, 0, 0);  // Start with LED on
+    deactivateFocusMode();
 
     // Mark timer screen dirty
     if (currentScreen == SCREEN_TIMER) {
@@ -218,6 +220,7 @@ void startTimer() {
     timerEndMs = millis() + (timerMinutes * 60000UL);
     timerRunning = true;
     timerComplete = false;
+    activateFocusMode();
     setAllContentDirty();
     setZoneDirty(ZONE_STATUS);
     Serial.printf("Timer started: %d minutes\n", timerMinutes);
@@ -229,6 +232,7 @@ void stopTimer() {
     timerRunning = false;
     timerMinutes = 0;
     timerEndMs = 0;
+    deactivateFocusMode();
     setAllContentDirty();
     setZoneDirty(ZONE_STATUS);
     Serial.println("Timer stopped");

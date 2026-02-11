@@ -65,6 +65,10 @@ extern bool timerComplete;             // Timer just completed, flash LED
 extern unsigned long timerCompleteStartMs;  // When completion started
 extern char timerLabel[32];            // Label text above timer circle
 
+// ==================== Focus Mode ====================
+extern bool focusMode;                 // Is focus mode active?
+extern String pcClientIP;              // PC IP (auto-detected from pc_watcher requests)
+
 // ==================== Todo List ====================
 #define MAX_TODO_ITEMS 20
 extern TodoItem todoItems[MAX_TODO_ITEMS];
