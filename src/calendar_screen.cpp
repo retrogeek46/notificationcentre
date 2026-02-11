@@ -207,25 +207,31 @@ void drawCalendarContent() {
       bool isSprintEnd = (cellSprintDay == 13);
 
       if (isSprintStart || isSprintEnd) {
-         // Bracket dimensions derived from highlight box
-         int by = y + CAL_HL_Y_OFF;   // Same top as highlight box
-         int bh = CAL_HL_H;           // Same height as highlight box
-         int t = 3;                    // Stroke thickness
-         int armW = 7;                 // Horizontal arm length
+         int by = y + CAL_HL_Y_OFF;
+         int bh = CAL_HL_H;
+         int r = CAL_HL_ROUND;
+         int t = 3;   // Stroke thickness
+         int bw = 8;  // Bracket width
 
          if (isSprintStart) {
-           // [ bracket just outside left edge of highlight box
-           int bx = x + CAL_HL_X_OFF - t - 1;
-           canvas.fillRect(bx, by, t, bh, COLOR_CAL_SPRINT);             // Vertical
-           canvas.fillRect(bx, by, armW, t, COLOR_CAL_SPRINT);            // Top arm
-           canvas.fillRect(bx, by + bh - t, armW, t, COLOR_CAL_SPRINT);   // Bottom arm
+           // [ bracket: flush on the left edge of highlight box
+           int bx = x + CAL_HL_X_OFF - bw + 1; // overlap 1px for flush contact
+           canvas.fillRoundRect(bx, by, bw, bh, r, COLOR_CAL_SPRINT);
+           // Square off the right-side corners (open end) so arms are straight
+           canvas.fillRect(bx + bw - r, by, r, t, COLOR_CAL_SPRINT);
+           canvas.fillRect(bx + bw - r, by + bh - t, r, t, COLOR_CAL_SPRINT);
+           // Inner cutout
+           canvas.fillRoundRect(bx + t, by + t, bw - t, bh - 2 * t, max(r - t, 1), COLOR_BACKGROUND);
          }
          if (isSprintEnd) {
-           // ] bracket just outside right edge of highlight box
-           int bx = x + CAL_HL_X_OFF + CAL_HL_W + 1;
-           canvas.fillRect(bx, by, t, bh, COLOR_CAL_SPRINT);                      // Vertical
-           canvas.fillRect(bx - armW + t, by, armW, t, COLOR_CAL_SPRINT);          // Top arm
-           canvas.fillRect(bx - armW + t, by + bh - t, armW, t, COLOR_CAL_SPRINT); // Bottom arm
+           // ] bracket: flush on the right edge of highlight box
+           int bx = x + CAL_HL_X_OFF + CAL_HL_W - 1; // overlap 1px for flush contact
+           canvas.fillRoundRect(bx, by, bw, bh, r, COLOR_CAL_SPRINT);
+           // Square off the left-side corners (open end) so arms are straight
+           canvas.fillRect(bx, by, r, t, COLOR_CAL_SPRINT);
+           canvas.fillRect(bx, by + bh - t, r, t, COLOR_CAL_SPRINT);
+           // Inner cutout
+           canvas.fillRoundRect(bx, by + t, bw - t, bh - 2 * t, max(r - t, 1), COLOR_BACKGROUND);
          }
       }
     }
