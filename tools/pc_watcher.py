@@ -25,15 +25,8 @@ import os
 import struct
 import subprocess
 import sys
-import threading
-import tkinter as tk
-from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
-from logging.handlers import RotatingFileHandler
-
 import psutil
 import requests
-from flask import Flask, request as flask_request
 from PIL import Image
 
 # Windows Media Session API (using winsdk - works better with async)
@@ -90,11 +83,6 @@ LOG_FILE = os.path.join(SCRIPT_DIR, "pc_watcher.log")
 LOG_MAX_BYTES = 1024 * 1024  # 1 MB
 LOG_BACKUP_COUNT = 2
 
-# Focus mode settings
-FOCUS_SERVER_PORT = 5123
-BLOCKED_APPS_FILE = os.path.join(SCRIPT_DIR, "blocked_apps.txt")
-FOCUS_CHECK_INTERVAL = 0.5  # seconds between blocked app checks
-
 
 # ==================== Logging Setup ====================
 
@@ -140,39 +128,6 @@ def load_games_list():
     return games
 
 
-def load_blocked_apps():
-    """Load blocked executables and title keywords from blocked_apps.txt"""
-    blocked_exes = set()
-    blocked_titles = set()
-    section = None  # Track which section we're in
-
-    if os.path.exists(BLOCKED_APPS_FILE):
-        with open(BLOCKED_APPS_FILE, "r") as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    # Detect section headers from comments
-                    if line.startswith("# Blocked executables"):
-                        section = "exe"
-                    elif line.startswith("# Blocked window title"):
-                        section = "title"
-                    continue
-
-                if section == "title":
-                    blocked_titles.add(line.lower())
-                else:
-                    blocked_exes.add(line.lower())
-
-        log.info(f"Loaded {len(blocked_exes)} blocked exes, {len(blocked_titles)} blocked titles")
-    else:
-        # Defaults if file missing
-        blocked_exes = {"discord.exe"}
-        blocked_titles = {"youtube"}
-        log.warning(f"blocked_apps.txt not found, using defaults")
-
-    return blocked_exes, blocked_titles
-
-
 def get_active_window_exe():
     """Get the executable name of the currently active window"""
     if not WIN32_AVAILABLE:
@@ -194,19 +149,6 @@ def get_active_window_exe():
             return None
     except Exception as e:
         log.debug(f"Error getting active window: {e}")
-        return None
-
-
-def get_active_window_title():
-    """Get the title of the currently active window"""
-    if not WIN32_AVAILABLE:
-        return None
-    try:
-        hwnd = win32gui.GetForegroundWindow()
-        if hwnd == 0:
-            return None
-        return win32gui.GetWindowText(hwnd)
-    except Exception:
         return None
 
 
@@ -392,15 +334,6 @@ class PCWatcher:
             except Exception as e:
                 log.debug(f"NVML init failed: {e}")
 
-        # Focus mode state
-        self.focus_mode = False
-        self.blocked_exes, self.blocked_titles = load_blocked_apps()
-        self._overlay_visible = False
-        self._overlay_thread = None
-
-        # Start focus HTTP server in background thread
-        self._start_focus_server()
-
     # ==================== Gaming Detection ====================
 
     def check_gaming_mode(self):
@@ -415,111 +348,6 @@ class PCWatcher:
             return True
 
         return False
-
-    # ==================== Focus Mode ====================
-
-    def _start_focus_server(self):
-        """Start Flask HTTP server to receive focus commands from ESP32"""
-        app = Flask(__name__)
-        flask_log = logging.getLogger('werkzeug')
-        flask_log.setLevel(logging.WARNING)  # Suppress Flask request logs
-
-        @app.route('/focus', methods=['POST'])
-        def handle_focus():
-            focus = flask_request.form.get('focus', '')
-            if focus in ('on', '1', 'true'):
-                self.focus_mode = True
-                log.info("Focus Mode: ON (from ESP32)")
-                return '{"focus": true}', 200
-            elif focus in ('off', '0', 'false'):
-                self.focus_mode = False
-                log.info("Focus Mode: OFF (from ESP32)")
-                return '{"focus": false}', 200
-            return '{"error": "use focus=on or focus=off"}', 400
-
-        @app.route('/focus', methods=['GET'])
-        def focus_status():
-            return '{"focus": ' + str(self.focus_mode).lower() + '}', 200
-
-        def run_server():
-            app.run(host='0.0.0.0', port=FOCUS_SERVER_PORT, threaded=True)
-
-        thread = threading.Thread(target=run_server, daemon=True)
-        thread.start()
-        log.info(f"Focus server listening on :{FOCUS_SERVER_PORT}")
-
-    def check_blocked_app(self):
-        """Check if the active window is a blocked app. Returns app name or None."""
-        if not self.focus_mode:
-            return None
-
-        # Check by exe name
-        active_exe = get_active_window_exe()
-        if active_exe and active_exe.lower() in self.blocked_exes:
-            return active_exe
-
-        # Check by window title keywords
-        title = get_active_window_title()
-        if title:
-            title_lower = title.lower()
-            for keyword in self.blocked_titles:
-                if keyword in title_lower:
-                    return f"{keyword} (in {title[:40]})"
-
-        return None
-
-    def show_focus_overlay(self, blocked_app):
-        """Show a full-screen 'FOCUS!' overlay popup using tkinter"""
-        if self._overlay_visible:
-            return  # Don't stack overlays
-
-        def _show():
-            self._overlay_visible = True
-            try:
-                root = tk.Tk()
-                root.attributes('-topmost', True)
-                root.attributes('-alpha', 0.85)
-                root.overrideredirect(True)
-
-                # Full screen
-                sw = root.winfo_screenwidth()
-                sh = root.winfo_screenheight()
-                root.geometry(f"{sw}x{sh}+0+0")
-                root.configure(bg='#1a1a2e')
-
-                # Main focus text
-                label = tk.Label(root, text="FOCUS!",
-                                font=("Segoe UI", 120, "bold"),
-                                fg='#e94560', bg='#1a1a2e')
-                label.place(relx=0.5, rely=0.4, anchor='center')
-
-                # Blocked app info
-                info = tk.Label(root, text=f"Blocked: {blocked_app}",
-                               font=("Segoe UI", 24),
-                               fg='#888888', bg='#1a1a2e')
-                info.place(relx=0.5, rely=0.55, anchor='center')
-
-                # Dismiss hint
-                hint = tk.Label(root, text="Switch to a different app to continue",
-                               font=("Segoe UI", 16),
-                               fg='#555555', bg='#1a1a2e')
-                hint.place(relx=0.5, rely=0.65, anchor='center')
-
-                # Auto-close after 3 seconds
-                root.after(3000, root.destroy)
-
-                # Also close on click
-                root.bind('<Button-1>', lambda e: root.destroy())
-
-                root.mainloop()
-            except Exception as e:
-                log.debug(f"Overlay error: {e}")
-            finally:
-                self._overlay_visible = False
-
-        self._overlay_thread = threading.Thread(target=_show, daemon=True)
-        self._overlay_thread.start()
-        log.info(f"Focus overlay shown for: {blocked_app}")
 
     def send_gaming_mode(self, enabled: bool):
         """Send gaming mode toggle to ESP32"""
@@ -862,12 +690,6 @@ class PCWatcher:
                 if self.gaming_mode or not self.last_playing:
                     self.send_stats()
                 self.last_stats_update = current_time
-
-            # Focus mode: check for blocked apps
-            if self.focus_mode:
-                blocked = self.check_blocked_app()
-                if blocked:
-                    self.show_focus_overlay(blocked)
 
             await asyncio.sleep(POLL_INTERVAL)
 

@@ -6,7 +6,6 @@ Pillow      # Album art resizing
 
 # HTTP requests
 requests
-flask       # Focus mode HTTP server
 
 # System monitoring
 psutil

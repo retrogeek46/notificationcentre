@@ -8,8 +8,8 @@
 #include "led_control.h"
 #include "motor_control.h"
 #include "storage.h"
+#include "screen.h"
 #include "dashboard_html.h"
-#include "focus_control.h"
 
 AsyncWebServer server(80);
 
@@ -52,10 +52,6 @@ void setupApiRoutes() {
   server.on("/timer/label", HTTP_POST, handleTimerLabel);
   server.on("/timer", HTTP_POST, handleTimerSet);
   server.on("/timer", HTTP_GET, handleTimerStatus);
-
-  // Focus mode
-  server.on("/focus", HTTP_POST, handleFocusMode);
-  server.on("/focus", HTTP_GET, handleFocusStatus);
 
   // Root and Dashboard
   server.on("/dashboard", HTTP_GET, handleDashboard);
@@ -122,9 +118,7 @@ void handleClearAll(AsyncWebServerRequest* request) {
   clearAllNotifications();
   
   // Switch to dynamic default screen
-  currentScreen = getDefaultScreen();
-  setZoneDirty(ZONE_TITLE);
-  setAllContentDirty();
+  setScreen(getDefaultScreen());
   
   request->send(200, "application/json", "{\"status\":\"cleared\"}");
 }
@@ -314,12 +308,9 @@ void handleScreenSwitch(AsyncWebServerRequest* request) {
     resetTodoScreen();  // Reset todo display for fresh draw
     screenName = "todo";
   } else {
-    currentScreen = SCREEN_NOTIFS;
     screenName = "notifs";
+    setScreen(SCREEN_NOTIFS);
   }
-
-  setZoneDirty(ZONE_TITLE);
-  setAllContentDirty();
 
   request->send(200, "application/json",
     "{\"status\":\"ok\",\"screen\":\"" + screenName + "\"}");
@@ -391,13 +382,6 @@ void handlePcStats(AsyncWebServerRequest* request) {
   pcStatsUpdated = millis();
   setZoneDirty(ZONE_STATUS);
 
-  // Auto-detect PC IP from incoming request
-  String clientIP = request->client()->remoteIP().toString();
-  if (clientIP.length() > 0 && clientIP != pcClientIP) {
-    pcClientIP = clientIP;
-    Serial.printf("PC IP detected: %s\n", pcClientIP.c_str());
-  }
-
   Serial.printf("PC Stats: CPU %d°/%d%%/%.1fG GPU %d°/%d%% RAM %d/%dG NET ↓%.1f ↑%.1fM\n",
                 pcCpuTemp, pcCpuUsage, pcCpuSpeed, pcGpuTemp, pcGpuUsage,
                 pcRamUsed, pcRamTotal, pcNetDown, pcNetUp);
@@ -430,11 +414,7 @@ void handleCalendarMonth(AsyncWebServerRequest* request) {
   }
 
   // Switch to calendar screen if not already on it
-  if (currentScreen != SCREEN_CALENDAR) {
-    currentScreen = SCREEN_CALENDAR;
-    setZoneDirty(ZONE_TITLE);
-  }
-  setAllContentDirty();
+  setScreen(SCREEN_CALENDAR);
 
   request->send(200, "application/json",
     "{\"status\":\"ok\",\"month\":" + String(calViewMonth + 1) + ",\"year\":" + String(calViewYear) + "}");
@@ -493,11 +473,11 @@ void handleTodoList(AsyncWebServerRequest* request) {
   Serial.printf("Todo list updated: %d items changed, total: %d\n", updatedCount, todoItemCount);
   
   // Switch to todo screen if we have items
-  if (todoItemCount > 0 && currentScreen != SCREEN_TODO) {
-    currentScreen = SCREEN_TODO;
-    setZoneDirty(ZONE_TITLE);
+  if (todoItemCount > 0) {
+    setScreen(SCREEN_TODO);
+  } else {
+    setAllContentDirty();
   }
-  setAllContentDirty();
   saveTodos();  // Persist to flash
   
   request->send(200, "application/json",
@@ -606,8 +586,7 @@ void handleTimerSet(AsyncWebServerRequest* request) {
   }
   
   timerMinutes = minutes;
-  currentScreen = SCREEN_TIMER;
-  setAllZonesDirty();
+  setScreen(SCREEN_TIMER);
   
   Serial.printf("Timer set to %d minutes via API\n", minutes);
   request->send(200, "application/json", "{\"status\":\"ok\",\"minutes\":" + String(minutes) + "}");
@@ -668,32 +647,4 @@ void handleTimerLabel(AsyncWebServerRequest* request) {
   
   Serial.printf("Timer label set: %s\n", timerLabel);
   request->send(200, "application/json", "{\"status\":\"ok\",\"label\":\"" + label + "\"}");
-}
-
-// ==================== Focus Mode Handlers ====================
-void handleFocusMode(AsyncWebServerRequest* request) {
-  String action = request->hasParam("focus", true) ? request->getParam("focus", true)->value()
-                                                   : (request->hasParam("focus") ? request->getParam("focus")->value() : "");
-
-  if (action == "on" || action == "1" || action == "true") {
-    activateFocusMode();
-    request->send(200, "application/json", "{\"focus\":true}");
-  } else if (action == "off" || action == "0" || action == "false") {
-    deactivateFocusMode();
-    request->send(200, "application/json", "{\"focus\":false}");
-  } else {
-    request->send(400, "application/json", "{\"error\":\"Use focus=on or focus=off\"}");
-  }
-}
-
-void handleFocusStatus(AsyncWebServerRequest* request) {
-  String json = "{";
-  json += "\"focus\":" + String(focusMode ? "true" : "false");
-  json += ",\"timerRunning\":" + String(timerRunning ? "true" : "false");
-  if (timerRunning && timerEndMs > millis()) {
-    json += ",\"remainingSeconds\":" + String((timerEndMs - millis()) / 1000);
-  }
-  json += ",\"pcIP\":\"" + pcClientIP + "\"";
-  json += "}";
-  request->send(200, "application/json", json);
 }

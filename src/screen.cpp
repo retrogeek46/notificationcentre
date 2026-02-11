@@ -724,6 +724,31 @@ void updateNowPlayingTicker() {
   }
 }
 
+// ==================== Centralized Screen Switching ====================
+void setScreen(Screen screen) {
+  if (currentScreen == screen) return;
+
+  currentScreen = screen;
+
+  // Reset screen-specific states for the new screen
+  switch (currentScreen) {
+    case SCREEN_TIMER:
+      resetTimerScreen();
+      break;
+    case SCREEN_TODO:
+      resetTodoScreen();
+      break;
+    default:
+      break;
+  }
+
+  // Mark all zones dirty for a full refresh
+  setZoneDirty(ZONE_TITLE);
+  setAllContentDirty();
+  
+  Serial.printf("Screen switched to: %d\n", (int)currentScreen);
+}
+
 
 // ==================== Main Refresh ====================
 void refreshScreen() {

@@ -2,6 +2,7 @@
 #include "config.h"
 #include "state.h"
 #include "notif_screen.h"
+#include "screen.h"
 
 // Button state tracking
 static bool lastBtnClearNotifs = HIGH;  // Pull-up means HIGH when not pressed
@@ -28,8 +29,7 @@ void checkButtons() {
       if (currentState == LOW) {
         Serial.println("Button: Clear Notifications + Switch to Default Screen");
         clearAllNotifications();
-        currentScreen = getDefaultScreen();
-        setAllZonesDirty();
+        setScreen(getDefaultScreen());
       }
 
       lastBtnClearNotifs = currentState;

@@ -160,12 +160,6 @@
 #define TIMER_LABEL_Y 55                  // Y position for label text (above circle)
 #define TIMER_LABEL_MAX_CHARS 30          // Max characters for timer label
 
-// ===== Focus Mode Configuration =====
-#define FOCUS_PHONE_IP "192.168.1.200"  // Phone static IP (set in Android Wi-Fi settings)
-#define FOCUS_PHONE_PORT 8765           // Tasker HTTP server port
-#define FOCUS_PC_PORT 5123              // PC focus server port (IP auto-detected from pc_watcher)
-#define FOCUS_NOTIFY_TIMEOUT 2000       // HTTP request timeout (ms)
-
 // ===== UI Colors =====
 // Include TFT_eSPI before this header to use these
 #define COLOR_BACKGROUND TFT_BLACK

@@ -14,5 +14,6 @@ void clearZone(Zone zone);
 void drawTitle();
 void drawNowPlaying();
 void updateNowPlayingTicker();
+void setScreen(Screen screen);
 
 #endif
