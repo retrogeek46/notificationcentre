@@ -20,26 +20,40 @@ int getDaysInMonth(int month, int year) {
   return 31;
 }
 
-// ==================== Helper: Get Sprint Day Index ====================
-// Returns 0-13, where 0 is Sprint Start, 13 is Sprint End.
+// ==================== Helper: Get Sprint Info ====================
+// Returns sprint index (relative to anchor) and day index (0-13)
 // Anchor: 11-Feb-2026
-int getSprintDayIndex(time_t date) {
+void getSprintInfo(time_t date, int* sprintIndex, int* dayIndex) {
   static time_t anchorTime = 0;
   if (anchorTime == 0) {
     struct tm anchorTm = {0};
     anchorTm.tm_year = 2026 - 1900;
     anchorTm.tm_mon = 1; // February
     anchorTm.tm_mday = 11;
-    anchorTm.tm_hour = 0; anchorTm.tm_min = 0; anchorTm.tm_sec = 0;
+    anchorTm.tm_hour = 12; anchorTm.tm_min = 0; anchorTm.tm_sec = 0; // Use noon for safety
     anchorTime = mktime(&anchorTm);
   }
 
   double diffSeconds = difftime(date, anchorTime);
-  int diffDays = (int)(diffSeconds / 86400);
+  int diffDays = (int)floor(diffSeconds / 86400.0); // Use floor to handle negatives correctly
   
-  int cycleDay = diffDays % 14;
-  if (cycleDay < 0) cycleDay += 14;
-  return cycleDay;
+  if (diffDays >= 0) {
+    *sprintIndex = diffDays / 14;
+    *dayIndex = diffDays % 14;
+  } else {
+    // Handle days before anchor
+    // e.g. -1 day -> sprint -1, day 13
+    // -14 days -> sprint -1, day 0
+    // -15 days -> sprint -2, day 13
+    
+    // Mathematical modulo of negative numbers in C is dependent on implementation (usually truncates towards zero)
+    // -1 / 14 = 0, -1 % 14 = -1. We want sprint -1, day 13.
+    // We can use a small adjustment
+    int adjustedDays = diffDays + 1; // shift so -14 becomes -13
+    *sprintIndex = (adjustedDays / 14) - 1;
+    int rem = diffDays % 14;
+    *dayIndex = (rem < 0) ? (rem + 14) : rem;
+  }
 }
 
 static TFT_eSprite calSprite = TFT_eSprite(&tft);
@@ -114,6 +128,11 @@ void drawCalendarContent() {
   int startOffset = (firstDayOfWeek == 0) ? 6 : (firstDayOfWeek - 1);
   int daysInMonth = getDaysInMonth(displayMonth, displayYear);
 
+  // Determine Current active Sprint
+  int currentSprintIndex = 0;
+  int currentSprintDay = 0;
+  getSprintInfo(now, &currentSprintIndex, &currentSprintDay);
+
   // Render Day Headers (Mo Tu We Th...)
   canvas.setFreeFont(&MDIOTrial_Regular9pt7b);
   canvas.setTextColor(COLOR_CAL_DAY_HEADER);
@@ -178,29 +197,37 @@ void drawCalendarContent() {
     // Calculate epoch for this cell: firstDayEpoch + (offset * 24h)
     // Note: Use 12:00 PM epochs to be safe from DST shifts
     time_t cellTime = firstDayEpoch + ((cell - startOffset) * 86400);
-    int sprintDayIndex = getSprintDayIndex(cellTime);
+    int cellSprintIndex = 0;
+    int cellSprintDay = 0;
+    getSprintInfo(cellTime, &cellSprintIndex, &cellSprintDay);
     
-    bool isSprintStart = (sprintDayIndex == 0);
-    bool isSprintEnd = (sprintDayIndex == 13);
+    // Only show markers if this cell belongs to the CURRENT active sprint
+    if (cellSprintIndex == currentSprintIndex) {
+      bool isSprintStart = (cellSprintDay == 0);
+      bool isSprintEnd = (cellSprintDay == 13);
 
-    // Draw markers
-    if (isSprintStart || isSprintEnd) {
-       canvas.setTextColor(COLOR_CAL_SPRINT);
-       
-       if (isSprintStart) {
-         canvas.drawString("[", x - 6, y); 
-       }
-       if (isSprintEnd) {
-         canvas.drawString("]", x + (dayNum < 10 ? 8 : 14), y); 
-       }
-       
-       // Restore color
-       if (isCurrentMonthDay) {
-          if (isToday) canvas.setTextColor(COLOR_CAL_TODAY_TEXT);
-          else canvas.setTextColor(COLOR_CAL_DATE);
-       } else {
-          canvas.setTextColor(COLOR_CAL_ADJACENT);
-       }
+      if (isSprintStart || isSprintEnd) {
+         // Bracket dimensions derived from highlight box
+         int by = y + CAL_HL_Y_OFF;   // Same top as highlight box
+         int bh = CAL_HL_H;           // Same height as highlight box
+         int t = 3;                    // Stroke thickness
+         int armW = 7;                 // Horizontal arm length
+
+         if (isSprintStart) {
+           // [ bracket just outside left edge of highlight box
+           int bx = x + CAL_HL_X_OFF - t - 1;
+           canvas.fillRect(bx, by, t, bh, COLOR_CAL_SPRINT);             // Vertical
+           canvas.fillRect(bx, by, armW, t, COLOR_CAL_SPRINT);            // Top arm
+           canvas.fillRect(bx, by + bh - t, armW, t, COLOR_CAL_SPRINT);   // Bottom arm
+         }
+         if (isSprintEnd) {
+           // ] bracket just outside right edge of highlight box
+           int bx = x + CAL_HL_X_OFF + CAL_HL_W + 1;
+           canvas.fillRect(bx, by, t, bh, COLOR_CAL_SPRINT);                      // Vertical
+           canvas.fillRect(bx - armW + t, by, armW, t, COLOR_CAL_SPRINT);          // Top arm
+           canvas.fillRect(bx - armW + t, by + bh - t, armW, t, COLOR_CAL_SPRINT); // Bottom arm
+         }
+      }
     }
 
     canvas.drawString(String(dayNum), x, y);
