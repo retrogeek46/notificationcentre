@@ -294,19 +294,17 @@ void handleScreenSwitch(AsyncWebServerRequest* request) {
   String screenName = "notifs";
 
   if (name == "reminder") {
-    currentScreen = SCREEN_REMINDER;
     screenName = "reminder";
+    setScreen(SCREEN_REMINDER);
   } else if (name == "calendar") {
-    currentScreen = SCREEN_CALENDAR;
     screenName = "calendar";
+    setScreen(SCREEN_CALENDAR);
   } else if (name == "timer") {
-    currentScreen = SCREEN_TIMER;
-    resetTimerScreen();  // Reset timer display for fresh draw
     screenName = "timer";
+    setScreen(SCREEN_TIMER);
   } else if (name == "todo") {
-    currentScreen = SCREEN_TODO;
-    resetTodoScreen();  // Reset todo display for fresh draw
     screenName = "todo";
+    setScreen(SCREEN_TODO);
   } else {
     screenName = "notifs";
     setScreen(SCREEN_NOTIFS);
