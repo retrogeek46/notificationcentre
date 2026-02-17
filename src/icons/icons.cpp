@@ -21,6 +21,13 @@ void drawJiraIcon(int x, int y) {
   tft.setSwapBytes(false);
 }
 
+// ==================== Outlook Icon ====================
+void drawOutlookIcon(int x, int y) {
+  tft.setSwapBytes(true);
+  tft.pushImage(x, y, ICON_WIDTH, ICON_HEIGHT, outlook_icon);
+  tft.setSwapBytes(false);
+}
+
 // ==================== App Icon Dispatcher ====================
 void drawAppIcon(int x, int y, String app) {
   app.toLowerCase();
@@ -30,6 +37,9 @@ void drawAppIcon(int x, int y, String app) {
   }
   else if (app.indexOf("github") >= 0) {
     drawGitHubIcon(x, y);
+  }
+  else if (app.indexOf("outlook") >= 0) {
+    drawOutlookIcon(x, y);
   }
   else if (app.indexOf("jira") >= 0 || app.indexOf("atlassian") >= 0) {
     drawJiraIcon(x, y);

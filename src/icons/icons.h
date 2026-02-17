@@ -10,6 +10,7 @@
 #include "slack_icon.h"
 #include "github_icon.h"
 #include "jira.h"
+#include "outlook_icon.h"
 
 // External TFT reference
 extern TFT_eSPI tft;
@@ -21,6 +22,7 @@ void drawAppIcon(int x, int y, String app);
 void drawSlackIcon(int x, int y);
 void drawGitHubIcon(int x, int y);
 void drawJiraIcon(int x, int y);
+void drawOutlookIcon(int x, int y);
 void drawDiscIcon(int x, int y, int frame, bool spinning);
 
 #endif
