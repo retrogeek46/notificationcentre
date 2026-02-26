@@ -94,40 +94,6 @@ void drawCalendarContent() {
   struct tm tm;
   localtime_r(&now, &tm);
 
-  // Determine which month/year to display
-  int displayMonth, displayYear;
-  int todayDay = tm.tm_mday;  // Actual current day
-  int todayMonth = tm.tm_mon;
-  int todayYear = tm.tm_year + 1900;
-
-  if (calViewMonth >= 0 && calViewMonth <= 11) {
-    displayMonth = calViewMonth;
-  } else {
-    displayMonth = todayMonth;
-  }
-
-  if (calViewYear > 0) {
-    displayYear = calViewYear;
-  } else {
-    displayYear = todayYear;
-  }
-
-  // Check if we're viewing the current month (for highlighting today)
-  bool isCurrentMonth = (displayMonth == todayMonth && displayYear == todayYear);
-
-  // Calculate first day of displayed month
-  struct tm firstDayTm = {0};
-  firstDayTm.tm_year = displayYear - 1900;
-  firstDayTm.tm_mon = displayMonth;
-  firstDayTm.tm_mday = 1;
-  firstDayTm.tm_hour = 12; // Noon to avoid DST edge cases near midnight
-  time_t firstDayEpoch = mktime(&firstDayTm); // Get epoch for calculation
-  
-  // Re-read tm components in case mktime normalized them (optional but safer)
-  int firstDayOfWeek = firstDayTm.tm_wday; 
-  int startOffset = (firstDayOfWeek == 0) ? 6 : (firstDayOfWeek - 1);
-  int daysInMonth = getDaysInMonth(displayMonth, displayYear);
-
   // Determine Current active Sprint
   int currentSprintIndex = 0;
   int currentSprintDay = 0;
@@ -145,111 +111,102 @@ void drawCalendarContent() {
   // Header separator Y
   int lineY = yOffset + CAL_Y_HEADER + CAL_SEP_Y_OFFSET;
 
-  // Calculate previous month info for leading days
-  int prevMonth = (displayMonth == 0) ? 11 : displayMonth - 1;
-  int prevYear = (displayMonth == 0) ? displayYear - 1 : displayYear;
-  int daysInPrevMonth = getDaysInMonth(prevMonth, prevYear);
+  // --- Floating 5-week window logic ---
+  // Today's week is always in row 3 (index 2).
+  // Use a noon-based epoch for today to avoid DST edge cases when subtracting
+  // whole-day (86400 s) offsets — same pattern used throughout this file.
+  struct tm todayTm = tm;  // copy of now's localtime breakdown
+  todayTm.tm_hour = 12; todayTm.tm_min = 0; todayTm.tm_sec = 0;
+  time_t todayNoon = mktime(&todayTm);
+  // Recalculate wday after mktime normalises (should be unchanged, but be safe)
+  int todayWday = (todayTm.tm_wday == 0) ? 6 : (todayTm.tm_wday - 1); // Mon=0 … Sun=6
+  // Monday of the current week at noon
+  time_t mondayOfCurrentWeek = todayNoon - (time_t)todayWday * 86400;
+  // Window start = Monday 2 weeks before current week (row 0)
+  time_t firstMondayEpoch = mondayOfCurrentWeek - 14 * 86400;
 
-  // Calculate total cells needed (6 rows x 7 cols = 42 max, but we'll use what's needed)
-  int totalDays = startOffset + daysInMonth;
-  int totalRows = (totalDays + 6) / 7;  // Round up
-  int totalCells = totalRows * 7;
-
-  // Render all dates (prev month + current month + next month)
+  // Render 5 weeks (5 rows x 7 cols)
   canvas.setFreeFont(&MDIOTrial_Regular9pt7b);
   
-  for (int cell = 0; cell < totalCells; cell++) {
-    int col = cell % 7;
-    int row = cell / 7;
+  for (int row = 0; row < 5; row++) { // 5 rows for 5 weeks
+    for (int col = 0; col < 7; col++) { // 7 days per week
+      int cell = (row * 7) + col;
 
-    int x = CAL_X_START + (col * CAL_COL_W) + CAL_TEXT_X_OFFSET;
-    int y = lineY + CAL_GRID_Y_OFFSET + (row * CAL_ROW_H) + CAL_TEXT_Y_OFFSET;
+      int x = CAL_X_START + (col * CAL_COL_W) + CAL_TEXT_X_OFFSET;
+      int y = lineY + CAL_GRID_Y_OFFSET + (row * CAL_ROW_H) + CAL_TEXT_Y_OFFSET;
 
-    int dayNum;
-    bool isCurrentMonthDay = false;
-    bool isToday = false;
+      // Calculate the epoch for this specific cell
+      time_t cellEpoch = firstMondayEpoch + (cell * 86400);
+      struct tm cellTm;
+      localtime_r(&cellEpoch, &cellTm);
 
-    if (cell < startOffset) {
-      // Previous month's trailing days
-      dayNum = daysInPrevMonth - startOffset + cell + 1;
-      canvas.setTextColor(COLOR_CAL_ADJACENT);
-    } else if (cell < startOffset + daysInMonth) {
-      // Current month's days
-      dayNum = cell - startOffset + 1;
-      isCurrentMonthDay = true;
-      isToday = isCurrentMonth && (dayNum == todayDay);
-    } else {
-      // Next month's leading days
-      dayNum = cell - startOffset - daysInMonth + 1;
-      canvas.setTextColor(COLOR_CAL_ADJACENT);
-    }
+      int dayNum = cellTm.tm_mday;
+      bool isToday = (cellTm.tm_mday == todayTm.tm_mday &&
+                      cellTm.tm_mon == todayTm.tm_mon &&
+                      cellTm.tm_year == todayTm.tm_year);
 
-    if (isCurrentMonthDay) {
+      // Determine if the day is in the current month being displayed (for coloring)
+      // The "displayed month" is effectively the month of the current day, but we need to check each cell's month
+      bool isCurrentMonthDay = (cellTm.tm_mon == todayTm.tm_mon && cellTm.tm_year == todayTm.tm_year);
+
       if (isToday) {
         canvas.setTextColor(COLOR_CAL_TODAY_TEXT);
         canvas.fillRoundRect(x + CAL_HL_X_OFF, y + CAL_HL_Y_OFF, CAL_HL_W, CAL_HL_H, CAL_HL_ROUND, COLOR_CAL_TODAY_BG);
-      } else {
+      } else if (isCurrentMonthDay) {
         canvas.setTextColor(COLOR_CAL_DATE);
+      } else {
+        canvas.setTextColor(COLOR_CAL_ADJACENT);
       }
-    }
 
-    // Check for sprint markers
-    // Calculate epoch for this cell: firstDayEpoch + (offset * 24h)
-    // Note: Use 12:00 PM epochs to be safe from DST shifts
-    time_t cellTime = firstDayEpoch + ((cell - startOffset) * 86400);
-    int cellSprintIndex = 0;
-    int cellSprintDay = 0;
-    getSprintInfo(cellTime, &cellSprintIndex, &cellSprintDay);
-    
-    // Only show markers if this cell belongs to the CURRENT active sprint
-    if (cellSprintIndex == currentSprintIndex) {
-      bool isSprintStart = (cellSprintDay == 0);
-      bool isSprintEnd = (cellSprintDay == 13);
+      // Check for sprint markers
+      int cellSprintIndex = 0;
+      int cellSprintDay = 0;
+      getSprintInfo(cellEpoch, &cellSprintIndex, &cellSprintDay);
+      
+      // Only show markers if this cell belongs to the CURRENT active sprint
+      if (cellSprintIndex == currentSprintIndex) {
+        bool isSprintStart = (cellSprintDay == 0);
+        bool isSprintEnd = (cellSprintDay == 13);
 
-      if (isSprintStart || isSprintEnd) {
-         int by = y + CAL_HL_Y_OFF;
-         int bh = CAL_HL_H;
-         int r = CAL_HL_ROUND;
-         int t = 3;   // Stroke thickness
-         int bw = 8;  // Bracket width
+        if (isSprintStart || isSprintEnd) {
+           int by = y + CAL_HL_Y_OFF;
+           int bh = CAL_HL_H;
+           int r = CAL_HL_ROUND;
+           int t = 3;   // Stroke thickness
+           int bw = 8;  // Bracket width
 
-         if (isSprintStart) {
-           // [ bracket: flush on the left edge of highlight box
-           int bx = x + CAL_HL_X_OFF - bw + 1; // overlap 1px for flush contact
-           canvas.fillRoundRect(bx, by, bw, bh, r, COLOR_CAL_SPRINT);
-           // Square off the right-side corners (open end) so arms are straight
-           canvas.fillRect(bx + bw - r, by, r, t, COLOR_CAL_SPRINT);
-           canvas.fillRect(bx + bw - r, by + bh - t, r, t, COLOR_CAL_SPRINT);
-           // Inner cutout
-           canvas.fillRoundRect(bx + t, by + t, bw - t, bh - 2 * t, max(r - t, 1), COLOR_BACKGROUND);
-         }
-         if (isSprintEnd) {
-           // ] bracket: flush on the right edge of highlight box
-           int bx = x + CAL_HL_X_OFF + CAL_HL_W - 1; // overlap 1px for flush contact
-           canvas.fillRoundRect(bx, by, bw, bh, r, COLOR_CAL_SPRINT);
-           // Square off the left-side corners (open end) so arms are straight
-           canvas.fillRect(bx, by, r, t, COLOR_CAL_SPRINT);
-           canvas.fillRect(bx, by + bh - t, r, t, COLOR_CAL_SPRINT);
-           // Inner cutout
-           canvas.fillRoundRect(bx, by + t, bw - t, bh - 2 * t, max(r - t, 1), COLOR_BACKGROUND);
-         }
+           if (isSprintStart) {
+             // [ bracket: flush on the left edge of highlight box
+             int bx = x + CAL_HL_X_OFF - bw + 1; // overlap 1px for flush contact
+             canvas.fillRoundRect(bx, by, bw, bh, r, COLOR_CAL_SPRINT);
+             // Square off the right-side corners (open end) so arms are straight
+             canvas.fillRect(bx + bw - r, by, r, t, COLOR_CAL_SPRINT);
+             canvas.fillRect(bx + bw - r, by + bh - t, r, t, COLOR_CAL_SPRINT);
+             // Inner cutout
+             canvas.fillRoundRect(bx + t, by + t, bw - t, bh - 2 * t, max(r - t, 1), COLOR_BACKGROUND);
+           }
+           if (isSprintEnd) {
+             // ] bracket: flush on the right edge of highlight box
+             int bx = x + CAL_HL_X_OFF + CAL_HL_W - 1; // overlap 1px for flush contact
+             canvas.fillRoundRect(bx, by, bw, bh, r, COLOR_CAL_SPRINT);
+             // Square off the left-side corners (open end) so arms are straight
+             canvas.fillRect(bx, by, r, t, COLOR_CAL_SPRINT);
+             canvas.fillRect(bx, by + bh - t, r, t, COLOR_CAL_SPRINT);
+             // Inner cutout
+             canvas.fillRoundRect(bx, by + t, bw - t, bh - 2 * t, max(r - t, 1), COLOR_BACKGROUND);
+           }
+        }
       }
-    }
 
-    canvas.drawString(String(dayNum), x, y);
+      canvas.drawString(String(dayNum), x, y);
+    }
   }
 
-  // Draw month/year at the top left
+  // Draw month/year at the top left (this will be the month of 'today')
   canvas.setFreeFont(&MDIOTrial_Bold10pt7b);
   canvas.setTextColor(COLOR_CAL_TITLE);
   char monthBuf[32];
-  // Use the displayed month/year for the title
-  struct tm titleTm = {0};
-  titleTm.tm_year = displayYear - 1900;
-  titleTm.tm_mon = displayMonth;
-  titleTm.tm_mday = 1;
-  mktime(&titleTm);
-  strftime(monthBuf, sizeof(monthBuf), "%B %Y", &titleTm);
+  strftime(monthBuf, sizeof(monthBuf), "%B %Y", &todayTm);
   // Title remains at fixed title pos, adjusted for content offset if in sprite
   int titleY = yOffset + (CAL_TITLE_Y - zoneY);
   canvas.drawString(monthBuf, CAL_TITLE_X, titleY);

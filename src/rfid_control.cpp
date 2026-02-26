@@ -95,52 +95,116 @@ static void performRfidAction(const RfidCard& card) {
 String readMifareNdefText() {
   String text = "";
   byte keys[][6] = {
-    {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
-    {0xD3, 0xF7, 0xD3, 0xF7, 0xD3, 0xF7}
+    {0xD3, 0xF7, 0xD3, 0xF7, 0xD3, 0xF7}, // NDEF MAD key (NFC Forum Application)
+    {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}, // Factory Default
+    {0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5}, // NXP Default MAD key
+    {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}  // Empty/Blank key
   };
 
   MFRC522::MIFARE_Key key;
   bool authenticated = false;
-  byte blockAddr = 4;
+  byte blockAddr = -1;
   
-  for (int k = 0; k < 2; k++) {
-    for (int i = 0; i < 6; i++) key.keyByte[i] = keys[k][i];
-    if (rfid.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, blockAddr, &key, &(rfid.uid)) == MFRC522::STATUS_OK) {
-      authenticated = true;
-      break;
+  // NDEF messages on MIFARE Classic usually start at Sector 1 (Block 4)
+  // Sometimes they start at Sector 2 (Block 8) if Sector 1 is a large MAD
+  byte possibleStartBlocks[] = {4, 8}; 
+  
+  for (byte startBlock : possibleStartBlocks) {
+    if (authenticated) break;
+    
+    for (int k = 0; k < 4; k++) {
+      for (int i = 0; i < 6; i++) key.keyByte[i] = keys[k][i];
+      
+      MFRC522::StatusCode status = rfid.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, startBlock, &key, &(rfid.uid));
+      if (status == MFRC522::STATUS_OK) {
+        authenticated = true;
+        blockAddr = startBlock;
+        Serial.printf("RFID: Authenticated block %d with key index %d!\n", startBlock, k);
+        break;
+      }
     }
   }
 
   if (!authenticated) {
-    Serial.println("RFID: Failed to authenticate Mifare Classic block 4.");
+    Serial.println("RFID: Failed to authenticate Mifare Classic blocks 4 and 8. Cannot read NDEF.");
     return "";
   }
 
-  byte buffer[36];
+  // Read the 3 data blocks of the authenticated sector
+  byte buffer[54]; // 3 blocks * 16 bytes = 48 bytes + padding
   byte size = 18;
+  int bufIdx = 0;
   
-  if (rfid.MIFARE_Read(4, &buffer[0], &size) != MFRC522::STATUS_OK) return "";
-  size = 18;
-  if (rfid.MIFARE_Read(5, &buffer[16], &size) != MFRC522::STATUS_OK) return "";
-  
-  int ndefStart = -1;
-  for (int i = 0; i < 32; i++) {
-    if (buffer[i] == 0x03) { ndefStart = i; break; }
+  for (byte b = blockAddr; b < blockAddr + 3; b++) {
+    if (b % 4 == 3) continue; // Skip sector trailer blocks (e.g. 7, 11)
+    
+    size = 18;
+    if (rfid.MIFARE_Read(b, &buffer[bufIdx], &size) == MFRC522::STATUS_OK) {
+      bufIdx += 16;
+    } else {
+      Serial.printf("RFID: Failed to read block %d\n", b);
+      break;
+    }
   }
   
-  if (ndefStart == -1) return "";
+  if (bufIdx == 0) return "";
+  
+  // Dump raw hex for debugging
+  Serial.print("RFID: Raw Mifare Data = ");
+  for (int i = 0; i < bufIdx; i++) {
+    Serial.printf("%02X ", buffer[i]);
+  }
+  Serial.println();
+  
+  // Parse TLV blocks to properly find NDEF Message (0x03)
+  int ndefStart = -1;
+  int i = 0;
+  while (i < bufIdx - 1) {
+    if (buffer[i] == 0x00) { // NULL TLV
+      i++;
+    } else if (buffer[i] == 0x03) { // NDEF Message TLV found
+      ndefStart = i;
+      break;
+    } else if (buffer[i] == 0xFE) { // Terminator
+      break;
+    } else {
+      // Unknown TLV length skip
+      int tlvLen = buffer[i + 1];
+      if (tlvLen == 0xFF) {
+        tlvLen = (buffer[i+2] << 8) | buffer[i+3];
+        i += 4 + tlvLen;
+      } else {
+        i += 2 + tlvLen;
+      }
+    }
+  }
+  
+  if (ndefStart == -1) {
+    Serial.println("RFID: No NDEF TLV (0x03) found in Mifare data.");
+    return "";
+  }
   
   int recordStart = ndefStart + 2;
-  if (recordStart + 3 < 32 && buffer[recordStart + 3] == 0x54) { // 'T' check
-    int payloadLen = buffer[recordStart + 2];
+  
+  // NDEF Record Header Debug
+  byte header = buffer[recordStart];
+  byte typeLen = buffer[recordStart + 1];
+  byte payloadLen = buffer[recordStart + 2];
+  Serial.printf("RFID: NDEF Header=%02X, TypeLen=%d, PayloadLen=%d\n", header, typeLen, payloadLen);
+  
+  if (recordStart + 3 < bufIdx && buffer[recordStart + 3] == 0x54) { // 'T' check
     int langLen = buffer[recordStart + 4] & 0x3F;
     int textStart = recordStart + 5 + langLen;
     int textLength = payloadLen - langLen - 1;
     
-    if (textStart + textLength <= 32) {
+    if (textStart + textLength <= bufIdx) {
       for (int i = 0; i < textLength; i++) text += (char)buffer[textStart + i];
       Serial.printf("RFID: Extracted Mifare NDEF Text '%s'\n", text.c_str());
+    } else {
+      Serial.println("RFID: NDEF payload extends beyond read buffer.");
     }
+  } else {
+    Serial.printf("RFID: Mifare NDEF record is not Text. Type: 0x%02X\n", buffer[recordStart+3]);
   }
 
   return text;
