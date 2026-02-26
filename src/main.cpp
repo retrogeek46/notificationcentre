@@ -19,6 +19,7 @@
 #include "notif_screen.h"
 #include "reminder_screen.h"
 #include "timer_screen.h"
+#include "rfid_control.h"
 
 // ==================== Setup ====================
 void setup() {
@@ -32,6 +33,7 @@ void setup() {
   initScreen();
   initState();
   initStorage();  // Load persisted reminders
+  initRFID();     // Start hardware SPI and MFRC522
 
   // Network (shows status on screen)
   initWiFi();
@@ -86,6 +88,9 @@ void loop() {
 
   // Check rotary encoder
   checkEncoder();
+
+  // Poll RFID reader
+  checkRFID();
 
   yield();
 }

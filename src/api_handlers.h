@@ -29,6 +29,12 @@ void handleTimerStart(AsyncWebServerRequest* request);
 void handleTimerStop(AsyncWebServerRequest* request);
 void handleTimerStatus(AsyncWebServerRequest* request);
 void handleTimerLabel(AsyncWebServerRequest* request);
+
+// RFID Handlers
+void handleRfidCards(AsyncWebServerRequest* request);
+void handleRfidRegister(AsyncWebServerRequest* request);
+void handleRfidUnregister(AsyncWebServerRequest* request);
+
 void handleDashboard(AsyncWebServerRequest* request);
 
 #endif

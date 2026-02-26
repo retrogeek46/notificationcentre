@@ -70,6 +70,23 @@ extern char timerLabel[32];            // Label text above timer circle
 extern TodoItem todoItems[MAX_TODO_ITEMS];
 extern int todoItemCount;
 
+// ==================== RFID Registry ====================
+#ifndef RFID_MAX_CARDS
+#define RFID_MAX_CARDS 10
+#endif
+
+struct RfidCard {
+  String uid;
+  String action;
+  String param;
+  
+  RfidCard() : uid(""), action(""), param("") {}
+};
+
+extern RfidCard registeredCards[RFID_MAX_CARDS];
+extern int registeredCardCount;
+extern String lastScannedUid;
+
 // ==================== Helper Functions ====================
 void initState();
 void setZoneDirty(Zone zone);

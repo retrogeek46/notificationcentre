@@ -140,6 +140,11 @@ bool isZoneDirty(Zone zone) {
 TodoItem todoItems[MAX_TODO_ITEMS];
 int todoItemCount = 0;
 
+// ==================== RFID Registry ====================
+RfidCard registeredCards[RFID_MAX_CARDS];
+int registeredCardCount = 0;
+String lastScannedUid = "";
+
 bool hasUnfinishedTodos() {
   for (int i = 0; i < todoItemCount; i++) {
     if (!todoItems[i].completed) {

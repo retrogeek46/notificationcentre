@@ -77,6 +77,16 @@
 #define ENCODER_SPEED_STEP 15    // Speed change per click
 #define ENCODER_MIN_SPEED  50    // Minimum motor speed
 
+// RFID Pins (Hardware VSPI)
+#define RFID_ENABLED      1      // Set to 1 when wired
+#define RFID_SS_PIN       21     // SDA / SS
+#define RFID_RST_PIN      22     // Reset
+#define RFID_POLL_INTERVAL 200   // ms between scans
+
+// External APIs
+#define MUSIC_API_HOST    "192.168.1.13"
+#define MUSIC_API_PORT    8080
+
 // ===== Icon Dimensions =====
 #define ICON_HEIGHT 14
 #define ICON_WIDTH 14

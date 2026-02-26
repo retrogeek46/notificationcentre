@@ -53,6 +53,11 @@ void setupApiRoutes() {
   server.on("/timer", HTTP_POST, handleTimerSet);
   server.on("/timer", HTTP_GET, handleTimerStatus);
 
+  // RFID mapping
+  server.on("/rfid/cards", HTTP_GET, handleRfidCards);
+  server.on("/rfid/register", HTTP_POST, handleRfidRegister);
+  server.on("/rfid/unregister", HTTP_POST, handleRfidUnregister);
+
   // Root and Dashboard
   server.on("/dashboard", HTTP_GET, handleDashboard);
   server.on("/", HTTP_GET, handleRoot);
@@ -645,4 +650,43 @@ void handleTimerLabel(AsyncWebServerRequest* request) {
   
   Serial.printf("Timer label set: %s\n", timerLabel);
   request->send(200, "application/json", "{\"status\":\"ok\",\"label\":\"" + label + "\"}");
+}
+
+// ==================== RFID Handlers ====================
+#include "rfid_control.h"
+
+void handleRfidCards(AsyncWebServerRequest* request) {
+  request->send(200, "application/json", getRegisteredCardsJson());
+}
+
+void handleRfidRegister(AsyncWebServerRequest* request) {
+  String uid = request->hasParam("uid", true) ? request->getParam("uid", true)->value() : "";
+  String action = request->hasParam("action", true) ? request->getParam("action", true)->value() : "";
+  String param = request->hasParam("param", true) ? request->getParam("param", true)->value() : "";
+
+  if (uid.length() == 0 || action.length() == 0) {
+    request->send(400, "application/json", "{\"error\":\"Missing uid or action\"}");
+    return;
+  }
+
+  if (registerRfidCard(uid, action, param)) {
+    request->send(200, "application/json", "{\"status\":\"ok\",\"uid\":\"" + uid + "\"}");
+  } else {
+    request->send(507, "application/json", "{\"error\":\"Registry full\"}");
+  }
+}
+
+void handleRfidUnregister(AsyncWebServerRequest* request) {
+  String uid = request->hasParam("uid", true) ? request->getParam("uid", true)->value() : "";
+
+  if (uid.length() == 0) {
+    request->send(400, "application/json", "{\"error\":\"Missing uid\"}");
+    return;
+  }
+
+  if (unregisterRfidCard(uid)) {
+    request->send(200, "application/json", "{\"status\":\"ok\",\"uid\":\"" + uid + "\"}");
+  } else {
+    request->send(404, "application/json", "{\"error\":\"Not found\"}");
+  }
 }
