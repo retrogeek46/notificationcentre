@@ -70,7 +70,7 @@
 #define BTN_DEBOUNCE_MS   50     // Debounce delay in ms
 
 // Rotary encoder pins (input-only GPIOs, external pull-up required)
-#define ENCODER_ENABLED   1      // Set to 1 when encoder is wired
+#define ENCODER_ENABLED   0      // Set to 1 when encoder is wired
 #define ENCODER_CLK       36     // Rotation signal A
 #define ENCODER_DT        39     // Rotation signal B
 #define ENCODER_SW        34     // Push button
@@ -212,7 +212,6 @@
 #define COLOR_PRIORITY_MEDIUM TFT_ORANGE
 #define COLOR_PRIORITY_NORMAL TFT_LIGHTGREY
 
-// App icon colors
 #define COLOR_WHATSAPP TFT_GREEN
 #define COLOR_TELEGRAM TFT_BLUE
 #define COLOR_ICON_DEFAULT TFT_DARKGREY

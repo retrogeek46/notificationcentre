@@ -558,10 +558,11 @@ class PCWatcher:
         if self.lhm.available:
             used = self.lhm.get_ram_used_gb()
             total = self.lhm.get_ram_total_gb()
-            return used, total
+            usage = int((used / total) * 100) if total > 0 else 0
+            return used, total, usage
         # Fallback
         mem = psutil.virtual_memory()
-        return int(mem.used / (1024 ** 3)), int(mem.total / (1024 ** 3))
+        return int(mem.used / (1024 ** 3)), int(mem.total / (1024 ** 3)), int(mem.percent)
 
     def get_gpu_stats(self):
         """Get GPU temperature and usage"""
@@ -616,7 +617,7 @@ class PCWatcher:
         cpu_temp = self.get_cpu_temp()
         cpu_usage = self.get_cpu_usage()
         cpu_speed = self.get_cpu_speed()
-        ram_used, ram_total = self.get_ram_usage()
+        ram_used, ram_total, ram_usage = self.get_ram_usage()
         gpu_temp, gpu_usage = self.get_gpu_stats()
         net_down, net_up = self.get_net_speed()
 
@@ -626,6 +627,7 @@ class PCWatcher:
             "cpu_speed": cpu_speed,
             "ram_used": ram_used,
             "ram_total": ram_total,
+            "ram_usage": ram_usage,
             "gpu_temp": gpu_temp,
             "gpu_usage": gpu_usage,
             "net_down": net_down,
@@ -637,7 +639,7 @@ class PCWatcher:
             if response.status_code == 200:
                 log.debug(f"Stats: CPU {cpu_temp}°/{cpu_usage}%/{cpu_speed}G "
                          f"GPU {gpu_temp}°/{gpu_usage}% "
-                         f"RAM {ram_used}/{ram_total}G "
+                         f"RAM {ram_used}/{ram_total}G ({ram_usage}%) "
                          f"NET ↓{net_down}M ↑{net_up}M")
             else:
                 log.warning(f"ESP32 stats returned: {response.status_code}")

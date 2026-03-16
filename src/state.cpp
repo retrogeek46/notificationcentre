@@ -41,6 +41,7 @@ int pcCpuUsage = 0;
 float pcCpuSpeed = 0.0;
 int pcRamUsed = 0;
 int pcRamTotal = 0;
+int pcRamUsage = 0;
 int pcGpuTemp = 0;
 int pcGpuUsage = 0;
 float pcNetDown = 0.0;

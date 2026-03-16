@@ -377,6 +377,14 @@ void handlePcStats(AsyncWebServerRequest* request) {
   pcCpuSpeed = request->hasParam("cpu_speed", true) ? request->getParam("cpu_speed", true)->value().toFloat() : pcCpuSpeed;
   pcRamUsed = request->hasParam("ram_used", true) ? request->getParam("ram_used", true)->value().toInt() : pcRamUsed;
   pcRamTotal = request->hasParam("ram_total", true) ? request->getParam("ram_total", true)->value().toInt() : pcRamTotal;
+  
+  // Use explicit ram_usage if provided, otherwise calculate from used/total
+  if (request->hasParam("ram_usage", true)) {
+    pcRamUsage = request->getParam("ram_usage", true)->value().toInt();
+  } else if (pcRamTotal > 0) {
+    pcRamUsage = (pcRamUsed * 100) / pcRamTotal;
+  }
+
   pcGpuTemp = request->hasParam("gpu_temp", true) ? request->getParam("gpu_temp", true)->value().toInt() : pcGpuTemp;
   pcGpuUsage = request->hasParam("gpu_usage", true) ? request->getParam("gpu_usage", true)->value().toInt() : pcGpuUsage;
   pcNetDown = request->hasParam("net_down", true) ? request->getParam("net_down", true)->value().toFloat() : pcNetDown;
@@ -385,9 +393,9 @@ void handlePcStats(AsyncWebServerRequest* request) {
   pcStatsUpdated = millis();
   setZoneDirty(ZONE_STATUS);
 
-  Serial.printf("PC Stats: CPU %d°/%d%%/%.1fG GPU %d°/%d%% RAM %d/%dG NET ↓%.1f ↑%.1fM\n",
+  Serial.printf("PC Stats: CPU %d°/%d%%/%.1fG GPU %d°/%d%% RAM %d/%dG (%d%%) NET ↓%.1f ↑%.1fM\n",
                 pcCpuTemp, pcCpuUsage, pcCpuSpeed, pcGpuTemp, pcGpuUsage,
-                pcRamUsed, pcRamTotal, pcNetDown, pcNetUp);
+                pcRamUsed, pcRamTotal, pcRamUsage, pcNetDown, pcNetUp);
 
   request->send(200, "application/json", "{\"status\":\"ok\"}");
 }

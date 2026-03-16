@@ -149,13 +149,6 @@ String readMifareNdefText() {
   
   if (bufIdx == 0) return "";
   
-  // Dump raw hex for debugging
-  Serial.print("RFID: Raw Mifare Data = ");
-  for (int i = 0; i < bufIdx; i++) {
-    Serial.printf("%02X ", buffer[i]);
-  }
-  Serial.println();
-  
   // Parse TLV blocks to properly find NDEF Message (0x03)
   int ndefStart = -1;
   int i = 0;
@@ -230,13 +223,6 @@ String readNtagNdefText() {
   }
   
   if (bufIdx == 0) return ""; // Read completely failed
-
-  // Dump raw hex for debugging
-  Serial.print("RFID: Raw NTAG Data = ");
-  for (int i = 0; i < bufIdx; i++) {
-    Serial.printf("%02X ", fullBuffer[i]);
-  }
-  Serial.println();
 
   // Parse TLV blocks to properly find NDEF Message (0x03)
   int ndefStart = -1;

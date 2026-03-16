@@ -350,8 +350,7 @@ void drawPcStats() {
   int ramCx = x + STATUS_RAM_OFFSET;
   int ramCy = zoneH / 2 - 1;  // Move up 1px to align with text
   int ramRadius = STATUS_RAM_RADIUS;
-  float ramPercent = (pcRamTotal > 0) ? (float)pcRamUsed / pcRamTotal : 0;
-  int ramAngle = (int)(ramPercent * 360);
+  int ramAngle = (pcRamUsage * 360) / 100;
 
   // Draw empty circle
   npSprite.drawCircle(ramCx, ramCy, ramRadius, COLOR_RAM);

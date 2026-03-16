@@ -46,6 +46,7 @@ extern int pcCpuUsage;                 // CPU usage percentage
 extern float pcCpuSpeed;               // CPU speed in GHz
 extern int pcRamUsed;                  // RAM used in GB
 extern int pcRamTotal;                 // RAM total in GB
+extern int pcRamUsage;                 // RAM usage percentage (0-100)
 extern int pcGpuTemp;                  // GPU temperature in °C
 extern int pcGpuUsage;                 // GPU usage percentage
 extern float pcNetDown;                // Download speed in Mbps
