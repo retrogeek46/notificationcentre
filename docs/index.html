@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio | Earthy Rust</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container">
+        <!-- Main Portfolio Header -->
+        <header>
+            <h1>Retro</h1>
+            <p class="about-me">Building stuff</p>
+        </header>
+
+        <!-- Notification Centre -->
+        <section class="project-section">
+            <h2>Notification Centre</h2>
+            <p class="project-brief">Using an ESP32 and a screen to remove phone from my workflow. A desk companion that offloads information and notifications and (hopefully) prevents distractions.</p>
+            
+            <div class="screen-grid">
+                <div class="screen-item">
+                    <div class="screen-header">
+                        <h3>Notifications</h3>
+                        <div class="image-placeholder"><img src="resources/notif.png" alt="Notifications Screen"></div>
+                    </div>
+                    <ul class="screen-details">
+                        <li>Notifications to the phone are forwarded to the ESP32 via a Tasker profile.</li>
+                        <li>App icons are shown along with sender and the notif message</li>
+                        <li>LED light also lights up (I abhor audio pings for notifications) to grab attention</li>
+                    </ul>
+                </div>
+
+                <div class="screen-item">
+                    <div class="screen-header">
+                        <h3>Calendar</h3>
+                        <div class="image-placeholder"><img src="resources/calender.png" alt="Calendar Screen"></div>
+                    </div>
+                    <ul class="screen-details">
+                        <li>Highlights current day and keeps current week in the middle of the screen</li>
+                        <li>Sprint start and end markers for quick reference</li>
+                    </ul>
+                </div>
+
+                <div class="screen-item">
+                    <div class="screen-header">
+                        <h3>Status Zone</h3>
+                        <div class="image-placeholder"><img src="resources/status.png" alt="Status Zone Screen"></div>
+                    </div>
+                    <ul class="screen-details">
+                        <li>Consolidated view for PC thermals (CPU/GPU) and system load.</li>
+                        <li>Integrated Windows Media ticker showing "Now Playing" artist and title. Shows thumbnail of currently playing media (resolution respected, 16:9 for youtube and 1:1 for album arts)</li>
+                        <li>Works by running a python script on desktop that sends data every second</li>
+                        <li>Idle animation (when script is not running) shows are rolling record going left and right</li>
+                    </ul>
+                </div>
+
+                <div class="screen-item">
+                    <div class="screen-header">
+                        <h3>Timer</h3>
+                        <div class="image-placeholder"><img src="resources/timer.png" alt="Timer Screen"></div>
+                    </div>
+                    <ul class="screen-details">
+                        <li>Keeping track and focusing on particular task</li>
+                        <li>Rotate EC11 encoder to set time (from any screen), press to start/stop timer</li>
+                        <li>Label at top for reminding what task needs to be focused on</li>
+                    </ul>
+                </div>
+
+                <div class="screen-item">
+                    <div class="screen-header">
+                        <h3>To Do</h3>
+                        <div class="image-placeholder"><img src="resources/todo.png" alt="To Do Screen"></div>
+                    </div>
+                    <ul class="screen-details">
+                        <li>Upto 10 to do items that can be added</li>
+                        <li>Option to either remove or complete (checkmark) any completed task</li>
+                    </ul>
+                </div>
+
+                <div class="screen-item">
+                    <div class="screen-header">
+                        <h3>Reminders</h3>
+                        <div class="image-placeholder"><img src="resources/reminder.png" alt="Reminder Screen"></div>
+                    </div>
+                    <ul class="screen-details">
+                        <li>Set reminder for any future event</li>
+                        <li>Stored in non-volatile flash memory (NVS) to survive power cycles.</li>
+                        <li>Can snooze and dismiss reminders</li>
+                    </ul>
+                </div>
+
+                <!-- Administrative Web Interface (Wide) -->
+                <div class="screen-item wide">
+                    <h3>Web Dasboard (Hosted on itself)</h3>
+                    <div class="wide-content">
+                        <ul class="screen-details">
+                            <li>Complete control of the screen using a static webpage that the ESP32 serves</li>
+                            <li>Easy debug access in case of failures or glicthes</li>
+                        </ul>
+                        <div class="image-placeholder">
+                            <img src="resources/dashboard esp32.png" alt="dashboard">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Laptop Server -->
+        <section class="project-section">
+            <h2>Laptop Server</h2>
+            <p class="project-brief">Using old laptop from uni days as a home server with debian, docker and tailscale. NAS dreams sadly not affordable in this economy</p>
+            
+            <div class="screen-grid">
+                <div class="screen-item">
+                    <div class="screen-header">
+                        <h3>Plex Media</h3>
+                        <div class="image-placeholder">Navidrome and Jellyfin</div>
+                    </div>
+                    <ul class="screen-details">
+                        <li>Media hosting for ease of consumption, away from the streaming services</li>
+                        <li>Phenomenal music experience in Android Auto (Navidrome)</li>
+                        <li>High-availability access across all home and mobile devices.</li>
+                    </ul>
+                </div>
+
+                <div class="screen-item">
+                    <div class="screen-header">
+                        <h3>Posture Monitor</h3>
+                        <div class="image-placeholder">Posture Monitor</div>
+                    </div>
+                    <ul class="screen-details">
+                        <li>Use the laptop's webcam and opencv to track head/shoulder/balck position and alert if slouching</li>
+                        <li>Include a 30 min sitting timer, move a bit after that</li>
+                    </ul>
+                </div>
+
+                <div class="screen-item">
+                    <div class="screen-header">
+                        <h3>Pi-hole DNS</h3>
+                        <div class="image-placeholder">PIHOLE_SERVICE_PREVIEW</div>
+                    </div>
+                    <ul class="screen-details">
+                        <li>Network-wide advertisement and tracking protection for all devices.</li>
+                        <li>Significant reduction in latency through DNS-over-HTTPS (DoH).</li>
+                        <li>Real-time traffic analytics and security threat monitoring dashboard.</li>
+                    </ul>
+                </div>
+
+                <div class="screen-item">
+                    <div class="screen-header">
+                        <h3>Vaultwarden</h3>
+                        <div class="image-placeholder">Vaultwarden</div>
+                    </div>
+                    <ul class="screen-details">
+                        <li>Self-hosted password manager</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Vinyl Player -->
+        <section class="project-section">
+            <h2>Vinyl Player</h2>
+            <p class="project-brief"><strong>Status:</strong> In Progress. A tribute to analog music in a digital age, combining RFID-tagged mockups with high-fidelity streaming logic.</p>
+            
+            <div class="screen-grid">
+                <div class="screen-item">
+                    <div class="screen-header">
+                        <h3>NFC Platter</h3>
+                        <div class="image-placeholder">PLATTER_DEV_PREVIEW</div>
+                    </div>
+                    <ul class="screen-details">
+                        <li>Precision Hall-effect sensors for real-time RPM monitoring.</li>
+                        <li>Integrated multi-frequency RFID reader for instant album identification.</li>
+                        <li>Seamless lookup through personal API for lossless audio streams.</li>
+                    </ul>
+                </div>
+
+                <div class="screen-item">
+                    <div class="screen-header">
+                        <h3>Tonearm Logic</h3>
+                        <div class="image-placeholder">TONEARM_DEV_PREVIEW</div>
+                    </div>
+                    <ul class="screen-details">
+                        <li>Optical position sensing for automated playback start/stop.</li>
+                        <li>Magnetic dampening system for a premium mechanical tactile feel.</li>
+                        <li>Automatic tonearm return to park position on track completion.</li>
+                    </ul>
+                </div>
+
+                <div class="screen-item">
+                    <div class="screen-header">
+                        <h3>Hi-Fi Stream</h3>
+                        <div class="image-placeholder">HIFI_AUDIO_PREVIEW</div>
+                    </div>
+                    <ul class="screen-details">
+                        <li>Low-latency lossless FLAC playback via custom server bridge.</li>
+                        <li>Dynamic EQ profiles automatically applied per identified record.</li>
+                        <li>High-quality DAC integration for industrial-grade audio output.</li>
+                    </ul>
+                </div>
+
+                <div class="screen-item">
+                    <div class="screen-header">
+                        <h3>Chassis Design</h3>
+                        <div class="image-placeholder">CHASSIS_BUILD_PREVIEW</div>
+                    </div>
+                    <ul class="screen-details">
+                        <li>Custom 3D printed structural chassis with internal wood bracing.</li>
+                        <li>Active vibration isolation system for mechanical stability.</li>
+                        <li>Industrial design featuring exposed brass and laser-cut acrylic.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <p>Designed for the Desk. Scaled for the Cloud.</p>
+        </footer>
+    </div>
+
+</body>
+</html>

@@ -1,5 +1,7 @@
 # ESP32 Notification Display
 
+[![View Documentation](https://img.shields.io/badge/View-Documentation-cyan?style=for-the-badge&logo=github)](https://retrogeek46.github.io/notificationcentre/)
+
 WiFi-enabled ESP32 notification center with 2.4" TFT display. Shows app-specific icons, sender names, and messages with priority colors. Includes **Now Playing** display and **PC Stats Gaming Overlay**.
 
 ## ✨ Features
