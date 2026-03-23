@@ -125,12 +125,12 @@ header h1 {
 }
 
 .screen-item.wide .image-placeholder {
-    flex: 1.5;
+    flex: none;
     margin: 0;
-    height: auto;
-    max-height: 500px;
+    width: 280px;
     background: rgba(0, 0, 0, 0.2);
     overflow: hidden;
+    aspect-ratio: auto;
 }
 
 .screen-item.wide .image-placeholder img {
